@@ -1,39 +1,33 @@
-# DropNest 🪺
+<p align="center">
+  <img src="logo.png" width="128" alt="DropNest">
+</p>
 
-> 把 MacBook 的刘海（Notch）变成一块实用的悬浮面板：拖文件暂存、看正在播放的音乐。
+<h1 align="center">DropNest 🪺</h1>
 
-DropNest 是一个基于 [boring.notch](https://github.com/TheBoredTeam/boringnotch) 派生的个人项目。在保留刘海窗口这一核心形态的基础上，将功能聚焦于两项最常用的能力——**文件拖放暂存（Shelf）** 与 **媒体播放状态监听（Now Playing）**，对原项目的其余模块做了精简。
+<p align="center">
+  把 MacBook 的刘海变成一块实用的悬浮面板：拖文件暂存，看正在播放的音乐。
+</p>
 
-> ⚠️ **许可证说明**：本仓库从 boring.notch 派生，而 boring.notch 采用 **GPL-3.0** 许可。根据 GPL 的「衍生作品」条款，DropNest 同样以 **GPL-3.0** 发布，且必须保留原许可证与版权信息。详见仓库根目录的 `LICENSE` 与 `THIRD_PARTY_LICENSES`。
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%2014%2B-black" alt="Platform">
+  <img src="https://img.shields.io/badge/Swift-5.0-FA7343" alt="Swift">
+  <img src="https://img.shields.io/badge/version-2.7.3-green" alt="Version">
+</p>
 
----
-
-## 📑 目录
-
-- [功能特性](#功能特性)
-- [系统要求](#系统要求)
-- [技术栈与依赖](#技术栈与依赖)
-- [安装](#安装)
-- [从源码构建](#从源码构建)
-- [使用说明](#使用说明)
-- [权限与沙盒](#权限与沙盒)
-- [目录结构](#目录结构)
-- [常见问题](#常见问题)
-- [卸载](#卸载)
-- [许可证](#许可证)
-- [致谢](#致谢)
+> ⚠️ **许可证**：本项目派生自 [boring.notch](https://github.com/TheBoredTeam/boringnotch)（GPL-3.0）。依据 GPL「衍生作品」条款，DropNest 同样以 **GPL-3.0** 发布，必须保留原许可证与版权信息。详见 [`LICENSE`](LICENSE) 与 [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES)。
 
 ---
 
 ## 功能特性
 
-### 1. 刘海媒体条（Now Playing）
+### 刘海媒体条（Now Playing）
 
 - 当系统正在播放音乐时，刘海区域两侧展开，显示**专辑封面**与**动态频谱动画**。
 - 暂停 / 停止后自动收起为细条，不遮挡屏幕内容。
 - 通过系统级媒体接口获取播放状态，**支持任意播放器**（Apple Music、Spotify、网页播放器等），不依赖单一 App。
 
-### 2. 文件暂存（Shelf）
+### 文件暂存（Shelf）
 
 把文件拖到刘海区域即可「钉」在刘海上，随时取用，相当于一个悬浮的临时收纳区：
 
@@ -44,13 +38,13 @@ DropNest 是一个基于 [boring.notch](https://github.com/TheBoredTeam/boringno
 - **文件夹操作**：可直接压缩为 zip。
 - 每项均有缩略图预览。
 
-### 3. 交互方式
+### 交互方式
 
 - **悬停展开**：鼠标移到刘海上方自动展开面板。
 - **双指手势开合**：触控板双指开合控制面板展开 / 收起。
 - **拖拽检测区域可调**：可在设置中调整刘海拖拽感应区域的大小与灵敏度。
 
-### 4. 设置
+### 设置
 
 提供独立的设置窗口（通用 / 外观 / 媒体 / 文件架 / 关于 等分页），可微调刘海行为、外观、媒体显示与 Shelf 相关选项，并支持**登录时自动启动**。
 
