@@ -180,7 +180,7 @@ python3 dmgbuild_settings.py                           # 按配置生成 DMG
 
 ## 权限与沙盒
 
-DropNest 是**沙盒化应用**，其权限声明见 `boringNotch/DropNest.entitlements`：
+DropNest 是**沙盒化应用**，其权限声明见 `App/DropNest.entitlements`：
 
 | 权限 | 用途 |
 | --- | --- |
@@ -195,11 +195,11 @@ DropNest 是**沙盒化应用**，其权限声明见 `boringNotch/DropNest.entit
 
 ## 目录结构
 
-源码目录名为 **`boringNotch/`**（并非 `DropNest/`，历史命名保留未改）：
+源码目录名为 **`App/`**（DropNest 的 Swift 源码主目录）：
 
 ```
 DropNest/
-├── boringNotch/                     # 源码主目录
+├── App/                     # 源码主目录
 │   ├── DropNestApp.swift            # 应用入口：刘海窗口与拖拽检测管理
 │   ├── ContentView.swift            # 刘海整体布局（收起媒体条 / 展开 Shelf）
 │   ├── NotchViewCoordinator.swift   # 刘海视图协调
@@ -236,7 +236,7 @@ DropNest/
 └── README.md
 ```
 
-> 注：Xcode 工程中 `PRODUCT_NAME` 为 `DropNest`，`MARKETING_VERSION` 为 `2.7.3`，`PRODUCT_BUNDLE_IDENTIFIER` 目前仍沿用原项目的 `theboringteam.boringnotch`。若要以独立身份分发，建议改为你自己的反向域名（如 `com.yourname.dropnest`）。
+> 注：Xcode 工程中 `PRODUCT_NAME` 为 `DropNest`，`MARKETING_VERSION` 为 `2.7.3`，`PRODUCT_BUNDLE_IDENTIFIER` 已独立化为 `com.dropnest.app`（如需换成你自己的反向域名，请在 Xcode 中修改）。
 
 ---
 
@@ -260,7 +260,7 @@ A：在设置中调整「拖拽检测区域」的大小与灵敏度。
 
 1. 退出 DropNest（菜单栏图标 → 退出）。
 2. 将 `应用程序/DropNest.app` 拖入废纸篓。
-3. （可选）删除偏好文件：`~/Library/Containers/theboringteam.boringnotch/`（路径对应 bundle id）。
+3. （可选）删除偏好文件：`~/Library/Containers/com.dropnest.app/`（路径对应 bundle id）。
 4. 若开启了登录启动，在「系统设置 → 通用 → 登录项」中移除 DropNest。
 
 ---

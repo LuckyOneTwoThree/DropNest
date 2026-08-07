@@ -34,7 +34,7 @@ final class ClipboardHistoryStore: ObservableObject {
         let fm = FileManager.default
         let support = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         directory = (support ?? fm.temporaryDirectory)
-            .appendingPathComponent("boringNotch", isDirectory: true)
+            .appendingPathComponent("DropNest", isDirectory: true)
             .appendingPathComponent("ClipboardHistory", isDirectory: true)
         blobsDirectory = directory.appendingPathComponent("blobs", isDirectory: true)
         try? fm.createDirectory(at: blobsDirectory, withIntermediateDirectories: true)

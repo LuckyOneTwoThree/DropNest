@@ -91,10 +91,10 @@ xcodebuild \
 
 ## 项目结构速览
 
-源码主目录为 `boringNotch/`（历史命名保留，未改）：
+源码主目录为 `App/`：
 
 ```
-boringNotch/
+App/
 ├── DropNestApp.swift          # 应用入口
 ├── ContentView.swift          # 刘海整体布局
 ├── components/

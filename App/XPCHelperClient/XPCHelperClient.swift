@@ -8,7 +8,7 @@ final class XPCHelperClient: NSObject {
     nonisolated static let shared = XPCHelperClient()
 
     /// XPC 服务名 = Helper 的 bundle ID
-    private let serviceName = "theboringteam.boringnotch.DropNestXPCHelper"
+    private let serviceName = "com.dropnest.app.DropNestXPCHelper"
 
     private var connection: NSXPCConnection?
     private var lastKnownAuthorization: Bool?

@@ -59,7 +59,7 @@ xcodebuild build \
 
 ### 2.3 已知会影响构建/运行的环境坑
 
-- **`boring.notch/`、`mediaremote-adapter/` 是原始仓库残留目录**，与 `boringNotch/`（DropNest 实际源码）并存。它们不在 app target 里，不影响构建，但建议从工作区移除或 `.gitignore`，避免混淆。
+- **`boring.notch/`、`mediaremote-adapter/` 是原始仓库残留目录**，与 `App/`（DropNest 实际源码）并存。它们不在 app target 里，不影响构建，但建议从工作区移除或 `.gitignore`，避免混淆。
 - **`DropNestXPCHelper` 是独立 XPC target**：亮度/键盘背光通过它调用私有框架。GUI 测试里若测亮度，必须保证 Helper 随主 App 一起构建并随沙盒 entitlements 正确签名，否则 `BrightnessManager` 静默失败（`publish` 不触发）。
 - **辅助功能权限**：HUD 替换依赖 `MediaKeyInterceptor` 的事件拦截，运行时需用户在「系统设置 ▸ 隐私与安全性 ▸ 辅助功能」中授权 DropNest。未授权时 `hudReplacement` 会被自动置回 `false`。
 

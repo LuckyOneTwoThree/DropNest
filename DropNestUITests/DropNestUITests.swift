@@ -14,7 +14,7 @@ import XCTest
 class DropNestUITests: XCTestCase {
 
     /// 被测 App。bundleIdentifier 取自 project.pbxproj 的 PRODUCT_BUNDLE_IDENTIFIER。
-    let app = XCUIApplication(bundleIdentifier: "theboringteam.boringnotch")
+    let app = XCUIApplication(bundleIdentifier: "com.dropnest.app")
 
     override func setUpWithError() throws {
         continueAfterFailure = false
