@@ -8,12 +8,15 @@
 
 import SwiftUI
 import AppKit
+import Defaults
 
 struct ShelfView: View {
     @EnvironmentObject var vm: NotchViewModel
     @StateObject var tvm = ShelfStateViewModel.shared
     @StateObject var selection = ShelfSelectionModel.shared
     @StateObject private var quickLookService = QuickLookService()
+    @State private var confirmClear: Bool = false
+    @State private var confirmResetTask: Task<Void, Never>?
     private let spacing: CGFloat = 8
 
     var body: some View {
@@ -30,9 +33,48 @@ struct ShelfView: View {
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
         guard !selection.isDragging else { return false }
+        guard Defaults[.boringShelf] else { return false }
         vm.dropEvent = true
         ShelfStateViewModel.shared.load(providers)
         return true
+    }
+
+    /// Two-step clear: first tap arms ("确认清空？"), second tap executes.
+    /// Avoids system alert sheets that may not present reliably on the
+    /// non-activating notch panel.
+    private var clearButton: some View {
+        Button(role: .destructive) {
+            if confirmClear {
+                confirmResetTask?.cancel()
+                confirmClear = false
+                ShelfStateViewModel.shared.clearAll()
+            } else {
+                confirmClear = true
+                confirmResetTask?.cancel()
+                confirmResetTask = Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(3))
+                    guard !Task.isCancelled else { return }
+                    confirmClear = false
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: confirmClear ? "exclamationmark.triangle.fill" : "trash")
+                    .font(.system(size: 11))
+                if confirmClear {
+                    Text("确认清空？")
+                        .font(.system(.caption2, design: .rounded))
+                        .fontWeight(.semibold)
+                } else {
+                    Text("清空")
+                        .font(.system(.caption, design: .rounded))
+                }
+            }
+            .foregroundStyle(confirmClear ? .red : .red.opacity(0.85))
+        }
+        .buttonStyle(.plain)
+        .help("清空文件架全部内容")
+        .animation(.smooth(duration: 0.15), value: confirmClear)
     }
 
     private func updateQuickLookSelection() {
@@ -89,18 +131,29 @@ struct ShelfView: View {
                         .fontWeight(.medium)
                 }
             } else {
-                ScrollView(.horizontal) {
-                    HStack(spacing: spacing) {
-                        ForEach(tvm.items) { item in
-                            ShelfItemView(item: item)
-                                .environmentObject(quickLookService)
+                VStack(spacing: 6) {
+                    HStack {
+                        Text("\(tvm.items.count) 项")
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundStyle(.gray)
+                        Spacer()
+                        clearButton
+                    }
+                    .padding(.horizontal, 4)
+
+                    ScrollView(.horizontal) {
+                        HStack(spacing: spacing) {
+                            ForEach(tvm.items) { item in
+                                ShelfItemView(item: item)
+                                    .environmentObject(quickLookService)
+                            }
                         }
                     }
-                }
-                .padding(-spacing)
-                .scrollIndicators(.never)
-                .onDrop(of: [.fileURL, .url, .utf8PlainText, .plainText, .data], isTargeted: $vm.dragDetectorTargeting) { providers in
-                    handleDrop(providers: providers)
+                    .padding(-spacing)
+                    .scrollIndicators(.never)
+                    .onDrop(of: [.fileURL, .url, .utf8PlainText, .plainText, .data], isTargeted: $vm.dragDetectorTargeting) { providers in
+                        handleDrop(providers: providers)
+                    }
                 }
             }
         }

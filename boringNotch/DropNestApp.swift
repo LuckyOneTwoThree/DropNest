@@ -203,9 +203,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleDragEntersNotchRegion(onScreen screen: NSScreen) {
         guard let uuid = screen.displayUUID else { return }
 
+        // A drag into the notch is a shelf-deposit intent: always show the shelf tab.
         if Defaults[.showOnAllDisplays], let viewModel = viewModels[uuid] {
+            viewModel.openTab = .shelf
             viewModel.open()
         } else if !Defaults[.showOnAllDisplays], let windowScreen = window?.screen, screen == windowScreen {
+            vm.openTab = .shelf
             vm.open()
         }
     }
@@ -259,6 +262,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Trimmed build removed the onboarding flow; mark first launch as complete
+        // so hover-to-open in ContentView is not permanently blocked (see handleHover).
+        UserDefaults.standard.set(false, forKey: "firstLaunch")
 
         NotificationCenter.default.addObserver(
             self,
@@ -341,6 +347,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         setupDragDetectors()
+
+        // Start clipboard history capture (respects clipboardHistoryEnabled).
+        Task { @MainActor in
+            _ = ClipboardMonitor.shared
+            ClipboardQuickPanelController.shared.startIfEnabled()
+        }
 
         previousScreens = NSScreen.screens
     }

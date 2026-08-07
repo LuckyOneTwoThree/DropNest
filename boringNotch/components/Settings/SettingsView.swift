@@ -28,6 +28,9 @@ struct SettingsView: View {
                 NavigationLink(value: "Shelf") {
                     Label("文件架", systemImage: "books.vertical")
                 }
+                NavigationLink(value: "Clipboard") {
+                    Label("剪贴板", systemImage: "clipboard")
+                }
                 NavigationLink(value: "About") {
                     Label("关于", systemImage: "info.circle")
                 }
@@ -47,6 +50,8 @@ struct SettingsView: View {
                     Media()
                 case "Shelf":
                     Shelf()
+                case "Clipboard":
+                    ClipboardSettings()
                 case "About":
                     About()
                 default:
@@ -61,6 +66,18 @@ struct SettingsView: View {
         .frame(width: 700)
         .background(Color(NSColor.windowBackgroundColor))
         .tint(.effectiveAccent)
+    }
+}
+
+/// Shared toolbar (quit button) so every settings page looks the same.
+private extension View {
+    func quitToolbar() -> some View {
+        self.toolbar {
+            Button("退出应用") {
+                NSApp.terminate(nil)
+            }
+            .controlSize(.extraLarge)
+        }
     }
 }
 
@@ -193,12 +210,7 @@ struct GeneralSettings: View {
             NotchBehaviour()
             gestureControls()
         }
-        .toolbar {
-            Button("退出应用") {
-                NSApp.terminate(self)
-            }
-            .controlSize(.extraLarge)
-        }
+        .quitToolbar()
         .accentColor(.effectiveAccent)
         .navigationTitle("General")
         .onChange(of: openNotchOnHover) {
@@ -235,7 +247,7 @@ struct GeneralSettings: View {
             Text("手势控制")
         } footer: {
             Text(
-                "在刘海双指上滑关闭，双指下滑打开（当 **悬停展开刘海** 关闭时生效）"
+                "在刘海双指上滑关闭，双指下滑打开（当 **悬停展开刘海** 关闭时生效）。\n剪贴板历史页签展开时下滑手势自动禁用，避免与滚动历史冲突。"
             )
             .multilineTextAlignment(.trailing)
             .foregroundStyle(.secondary)
@@ -297,6 +309,7 @@ struct Appearance: View {
                 Text("强调色")
             }
         }
+        .quitToolbar()
         .accentColor(.effectiveAccent)
         .navigationTitle("Appearance")
     }
@@ -330,6 +343,7 @@ struct Media: View {
                 Text("播放暂停后，媒体状态条保留的时间。")
             }
         }
+        .quitToolbar()
         .accentColor(.effectiveAccent)
         .navigationTitle("Media")
     }
@@ -366,55 +380,182 @@ struct Shelf: View {
                 Text("通用")
             }
         }
+        .quitToolbar()
         .accentColor(.effectiveAccent)
         .navigationTitle("Shelf")
+    }
+}
+
+struct ClipboardSettings: View {
+    @Default(.clipboardHistoryEnabled) var historyEnabled
+    @Default(.clipboardKeepImages) var keepImages
+    @Default(.clipboardKeepFiles) var keepFiles
+    @Default(.clipboardMaxItems) var maxItems
+    @Default(.clipboardRetentionDays) var retentionDays
+    @Default(.clipboardMaxItemSizeMB) var maxItemSizeMB
+    @Default(.clipboardIgnoredApps) var ignoredApps
+    @Default(.clipboardHotkeyEnabled) var hotkeyEnabled
+    @Default(.clipboardAutoPaste) var autoPaste
+
+    @State private var newIgnoredApp: String = ""
+
+    var body: some View {
+        Form {
+            Section {
+                Defaults.Toggle(key: .clipboardHistoryEnabled) {
+                    Text("启用剪贴板历史")
+                }
+                Defaults.Toggle(key: .clipboardKeepImages) {
+                    Text("记录图片")
+                }
+                .disabled(!historyEnabled)
+                Defaults.Toggle(key: .clipboardKeepFiles) {
+                    Text("记录文件引用")
+                }
+                .disabled(!historyEnabled)
+            } header: {
+                Text("通用")
+            } footer: {
+                Text("记录复制的文本、图片和文件引用，随时从历史中取回。文件只记录引用，不复制内容。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Stepper(value: $maxItems, in: 5...50, step: 5) {
+                    HStack {
+                        Text("历史容量")
+                        Spacer()
+                        Text("\(maxItems) 条")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Picker("保留时长", selection: $retentionDays) {
+                    Text("永不过期").tag(0)
+                    Text("1 天").tag(1)
+                    Text("7 天").tag(7)
+                    Text("30 天").tag(30)
+                }
+                Stepper(value: $maxItemSizeMB, in: 1...100, step: 1) {
+                    HStack {
+                        Text("单条大小上限")
+                        Spacer()
+                        Text("\(maxItemSizeMB) MB")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("容量")
+            } footer: {
+                Text("超出容量时自动淘汰最旧的记录；置顶（Pin）的记录不会被淘汰。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Defaults.Toggle(key: .clipboardHotkeyEnabled) {
+                    Text("快捷键呼出快速面板（⌃⌥V）")
+                }
+                .disabled(!historyEnabled)
+                Defaults.Toggle(key: .clipboardAutoPaste) {
+                    Text("选中后自动粘贴到当前应用")
+                }
+                .disabled(!historyEnabled)
+                .onChange(of: autoPaste) {
+                    if autoPaste && !ClipboardQuickPanelController.isAccessibilityTrusted {
+                        ClipboardQuickPanelController.shared.promptForAccessibility()
+                    }
+                }
+            } header: {
+                Text("快速面板")
+            } footer: {
+                Text("自动粘贴需要「辅助功能」权限；未授权时仅复制到剪贴板，可手动 ⌘V 粘贴。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                ForEach(ignoredApps, id: \.self) { bundleID in
+                    HStack {
+                        if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+                            Image(nsImage: NSWorkspace.shared.icon(forFile: appURL.path))
+                                .resizable()
+                                .frame(width: 16, height: 16)
+                            Text(appURL.deletingPathExtension().lastPathComponent)
+                            Text(bundleID)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Image(systemName: "app.dashed")
+                                .frame(width: 16, height: 16)
+                            Text(bundleID)
+                        }
+                        Spacer()
+                        Button(role: .destructive) {
+                            ignoredApps.removeAll { $0 == bundleID }
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+                HStack {
+                    TextField("添加 Bundle ID（如 com.example.app）", text: $newIgnoredApp)
+                        .textFieldStyle(.roundedBorder)
+                    Button("添加") {
+                        let id = newIgnoredApp.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !id.isEmpty, !ignoredApps.contains(id) else { return }
+                        ignoredApps.append(id)
+                        newIgnoredApp = ""
+                    }
+                    .disabled(newIgnoredApp.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            } header: {
+                Text("忽略的应用")
+            } footer: {
+                Text("来自这些应用的复制内容不会被记录。密码管理器（如 1Password）复制的内容始终自动跳过。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .quitToolbar()
+        .accentColor(.effectiveAccent)
+        .navigationTitle("Clipboard")
     }
 }
 
 struct About: View {
     @State private var showBuildNumber: Bool = false
     var body: some View {
-        VStack {
-            Form {
-                Section {
-                    HStack {
-                        Text("版本名称")
-                        Spacer()
-                        Text(Defaults[.releaseName])
-                            .foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Text("版本")
-                        Spacer()
-                        if showBuildNumber {
-                            Text("(\(Bundle.main.buildVersionNumber ?? ""))")
-                                .foregroundStyle(.secondary)
-                        }
-                        Text(Bundle.main.releaseVersionNumber ?? "unkown")
-                            .foregroundStyle(.secondary)
-                    }
-                    .onTapGesture {
-                        withAnimation {
-                            showBuildNumber.toggle()
-                        }
-                    }
-                } header: {
-                    Text("版本信息")
+        Form {
+            Section {
+                HStack {
+                    Text("版本名称")
+                    Spacer()
+                    Text(Defaults[.releaseName])
+                        .foregroundStyle(.secondary)
                 }
-
-
+                HStack {
+                    Text("版本")
+                    Spacer()
+                    if showBuildNumber {
+                        Text("(\(Bundle.main.buildVersionNumber ?? ""))")
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(Bundle.main.releaseVersionNumber ?? "unkown")
+                        .foregroundStyle(.secondary)
+                }
+                .onTapGesture {
+                    withAnimation {
+                        showBuildNumber.toggle()
+                    }
+                }
+            } header: {
+                Text("版本信息")
             }
-            VStack(spacing: 0) {
-                Divider()
-                Text("精简版 —— 文件架 + 正在播放")
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 5)
-                    .padding(.bottom, 7)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 10)
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
         }
+        .quitToolbar()
+        .accentColor(.effectiveAccent)
         .navigationTitle("About")
     }
 }

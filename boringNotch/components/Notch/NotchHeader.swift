@@ -15,7 +15,9 @@ struct NotchHeader: View {
     var body: some View {
         HStack(spacing: 0) {
             HStack {
-                EmptyView()
+                if vm.notchState == .open {
+                    openTabBar
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .opacity(vm.notchState == .closed ? 0 : 1)
@@ -61,6 +63,43 @@ struct NotchHeader: View {
         }
         .foregroundColor(.gray)
         .environmentObject(vm)
+    }
+
+    @ViewBuilder
+    private var openTabBar: some View {
+        HStack(spacing: 6) {
+            ForEach(vm.enabledTabs, id: \.self) { tab in
+                tabButton(
+                    title: tab == .shelf ? "文件架" : "剪贴板",
+                    icon: tab == .shelf ? "books.vertical" : "clipboard",
+                    tab: tab
+                )
+            }
+        }
+        .padding(.leading, 12)
+    }
+
+    private func tabButton(title: String, icon: String, tab: NotchOpenTab) -> some View {
+        let selected = vm.openTab == tab
+        return Button {
+            withAnimation(.smooth(duration: 0.2)) {
+                vm.openTab = tab
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                Text(title)
+                    .font(.system(.caption, design: .rounded))
+                    .fontWeight(.medium)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(selected ? Color.white.opacity(0.16) : Color.clear)
+            .clipShape(Capsule())
+            .foregroundStyle(selected ? .white : .gray)
+        }
+        .buttonStyle(.plain)
     }
 }
 

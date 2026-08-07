@@ -48,6 +48,12 @@ final class ShelfStateViewModel: ObservableObject {
         items.removeAll { $0.id == item.id }
     }
 
+    func clearAll() {
+        let removed = items
+        items = []
+        removed.forEach { $0.cleanupStoredData() }
+    }
+
     func updateBookmark(for item: ShelfItem, bookmark: Data) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         if case .file = items[idx].kind {
@@ -83,6 +89,12 @@ final class ShelfStateViewModel: ObservableObject {
         Task { [weak self] in
             let dropped = await ShelfDropService.items(from: providers)
             await MainActor.run {
+                guard !dropped.isEmpty else {
+                    self?.isLoading = false
+                    return
+                }
+                // A successful shelf deposit marks the most recent activity.
+                NotchTabPreference.lastActivity = .shelfDeposit
                 self?.add(dropped)
                 self?.isLoading = false
             }

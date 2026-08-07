@@ -80,6 +80,21 @@ extension Defaults.Keys {
     static let autoRemoveShelfItems = Key<Bool>("autoRemoveShelfItems", default: false)
     static let expandedDragDetection = Key<Bool>("expandedDragDetection", default: true)
 
+    // MARK: Clipboard
+    static let clipboardHistoryEnabled = Key<Bool>("clipboardHistoryEnabled", default: true)
+    static let clipboardMaxItems = Key<Int>("clipboardMaxItems", default: 5)
+    static let clipboardRetentionDays = Key<Int>("clipboardRetentionDays", default: 0) // 0 = 永不过期
+    static let clipboardKeepImages = Key<Bool>("clipboardKeepImages", default: true)
+    static let clipboardKeepFiles = Key<Bool>("clipboardKeepFiles", default: true)
+    static let clipboardMaxItemSizeMB = Key<Int>("clipboardMaxItemSizeMB", default: 10)
+    static let clipboardIgnoredApps = Key<[String]>("clipboardIgnoredApps", default: [
+        "com.agilebits.onepassword7",
+        "com.1password.1password",
+        "com.apple.keychainaccess"
+    ])
+    static let clipboardHotkeyEnabled = Key<Bool>("clipboardHotkeyEnabled", default: true)
+    static let clipboardAutoPaste = Key<Bool>("clipboardAutoPaste", default: false) // 需辅助功能权限
+
     // MARK: Advanced Settings
     static let useCustomAccentColor = Key<Bool>("useCustomAccentColor", default: false)
     static let customAccentColorData = Key<Data?>("customAccentColorData", default: nil)

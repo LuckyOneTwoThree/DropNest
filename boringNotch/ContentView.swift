@@ -100,7 +100,7 @@ struct ContentView: View {
                         let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
 
                         return view
-                            .animation(vm.notchState == .open ? openAnimation : closeAnimation, value: vm.notchState)
+                            .animation(vm.notchState == .open ? openAnimation : closeAnimation, value: vm.notchSize)
                             .animation(.smooth, value: gestureProgress)
                     }
                     .contentShape(Rectangle())
@@ -130,7 +130,9 @@ struct ContentView: View {
                                 guard !Task.isCancelled else { return }
                                 await MainActor.run {
                                     if self.vm.notchState == .open && !self.isHovering && !SharingStateManager.shared.preventNotchClose {
-                                        self.vm.close()
+                                        withAnimation(self.animationSpring) {
+                                            self.vm.close()
+                                        }
                                     }
                                 }
                             }
@@ -175,6 +177,13 @@ struct ContentView: View {
             anyDropDebounceTask?.cancel()
 
             if isTargeted {
+                // Any drag entering the notch area is treated as "shelf deposit":
+                // switch to the shelf tab so the dropped content is visible.
+                if Defaults[.boringShelf] {
+                    withAnimation(.smooth(duration: 0.2)) {
+                        vm.openTab = .shelf
+                    }
+                }
                 if vm.notchState == .closed {
                     doOpen()
                 }
@@ -192,7 +201,9 @@ struct ContentView: View {
 
                 vm.dropEvent = false
                 if !SharingStateManager.shared.preventNotchClose {
-                    vm.close()
+                    withAnimation(animationSpring) {
+                        vm.close()
+                    }
                 }
             }
         }
@@ -217,8 +228,18 @@ struct ContentView: View {
             }
             .zIndex(2)
             if vm.notchState == .open {
-                VStack {
-                    ShelfView()
+                VStack(spacing: 8) {
+                    Group {
+                        switch vm.openTab {
+                        case .shelf:
+                            ShelfView()
+                                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
+                        case .clipboard:
+                            ClipboardHistoryView()
+                                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .transition(
                     .scale(scale: 0.8, anchor: .top)
@@ -230,7 +251,11 @@ struct ContentView: View {
                 .opacity(gestureProgress != 0 ? 1.0 - min(abs(gestureProgress) * 0.1, 0.3) : 1.0)
             }
         }
-        .onDrop(of: [.fileURL, .url, .utf8PlainText, .plainText, .data], delegate: GeneralDropTargetDelegate(isTargeted: $vm.generalDropTargeting))
+        .onDrop(of: [.fileURL, .url, .utf8PlainText, .plainText, .data], isTargeted: $vm.generalDropTargeting) { providers in
+            guard Defaults[.boringShelf] else { return false }
+            ShelfStateViewModel.shared.load(providers)
+            return true
+        }
     }
 
     @ViewBuilder
@@ -288,8 +313,35 @@ struct ContentView: View {
 
     private func doOpen() {
         withAnimation(animationSpring) {
+            applyDefaultTab()
             vm.open()
         }
+    }
+
+    /// Picks the default tab for this open based on the most recent activity:
+    /// last copy → clipboard (when it has content), last shelf deposit → shelf
+    /// (when it has content), otherwise the first enabled tab.
+    private func applyDefaultTab() {
+        let shelfEnabled = Defaults[.boringShelf]
+        let clipboardEnabled = Defaults[.clipboardHistoryEnabled]
+        let hasClipboardContent = !ClipboardHistoryStore.shared.items.isEmpty
+        let hasShelfContent = !ShelfStateViewModel.shared.items.isEmpty
+
+        switch NotchTabPreference.lastActivity {
+        case .copy where clipboardEnabled && hasClipboardContent:
+            vm.openTab = .clipboard
+        case .shelfDeposit where shelfEnabled && hasShelfContent:
+            vm.openTab = .shelf
+        default:
+            vm.openTab = shelfEnabled ? .shelf : .clipboard
+        }
+        vm.ensureValidTab()
+    }
+
+    /// True while the notch is open on the clipboard tab — scrolling the
+    /// history must not be hijacked by the notch's down-swipe gesture.
+    private var isClipboardTabOpen: Bool {
+        vm.notchState == .open && vm.openTab == .clipboard
     }
 
     // MARK: - Hover Management
@@ -329,10 +381,10 @@ struct ContentView: View {
                 await MainActor.run {
                     withAnimation(animationSpring) {
                         self.isHovering = false
-                    }
 
-                    if self.vm.notchState == .open && !SharingStateManager.shared.preventNotchClose {
-                        self.vm.close()
+                        if self.vm.notchState == .open && !SharingStateManager.shared.preventNotchClose {
+                            self.vm.close()
+                        }
                     }
                 }
             }
@@ -342,7 +394,8 @@ struct ContentView: View {
     // MARK: - Gesture Handling
 
     private func handleDownGesture(translation: CGFloat, phase: NSEvent.Phase) {
-        guard vm.notchState == .closed else { return }
+        // Never hijack scrolling inside the clipboard history tab.
+        guard vm.notchState == .closed, !isClipboardTabOpen else { return }
 
         if phase == .ended {
             withAnimation(animationSpring) { gestureProgress = .zero }
@@ -365,7 +418,8 @@ struct ContentView: View {
     }
 
     private func handleUpGesture(translation: CGFloat, phase: NSEvent.Phase) {
-        guard vm.notchState == .open else { return }
+        // Never hijack scrolling inside the clipboard history tab.
+        guard vm.notchState == .open, !isClipboardTabOpen else { return }
 
         withAnimation(animationSpring) {
             gestureProgress = (translation / Defaults[.gestureSensitivity]) * -20
@@ -380,10 +434,10 @@ struct ContentView: View {
         if translation > Defaults[.gestureSensitivity] {
             withAnimation(animationSpring) {
                 isHovering = false
-            }
-            if !SharingStateManager.shared.preventNotchClose {
-                gestureProgress = .zero
-                vm.close()
+                if !SharingStateManager.shared.preventNotchClose {
+                    gestureProgress = .zero
+                    vm.close()
+                }
             }
 
             if Defaults[.enableHaptics] {
@@ -411,26 +465,6 @@ struct FullScreenDropDelegate: DropDelegate {
         return true
     }
 
-}
-
-struct GeneralDropTargetDelegate: DropDelegate {
-    @Binding var isTargeted: Bool
-
-    func dropEntered(info: DropInfo) {
-        isTargeted = true
-    }
-
-    func dropExited(info: DropInfo) {
-        isTargeted = false
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        return DropProposal(operation: .cancel)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        return false
-    }
 }
 
 #Preview {

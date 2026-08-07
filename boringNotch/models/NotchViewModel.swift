@@ -10,6 +10,27 @@ import Combine
 import Defaults
 import SwiftUI
 
+/// Tabs available in the open notch.
+enum NotchOpenTab: String, CaseIterable {
+    case shelf
+    case clipboard
+}
+
+/// Tracks the most recent clipboard/shelf activity so the notch can pick a
+/// sensible default tab on the next open:
+/// copy → clipboard (if it has content), shelf deposit → shelf (if it has
+/// content), otherwise fall back to the shelf tab.
+@MainActor
+enum NotchTabPreference {
+    enum LastActivity {
+        case none
+        case copy
+        case shelfDeposit
+    }
+
+    static var lastActivity: LastActivity = .none
+}
+
 class NotchViewModel: NSObject, ObservableObject {
     @ObservedObject var coordinator = NotchViewCoordinator.shared
 
@@ -18,6 +39,8 @@ class NotchViewModel: NSObject, ObservableObject {
 
     @Published var contentType: ContentType = .normal
     @Published private(set) var notchState: NotchState = .closed
+    /// Which tab is shown in the open notch: shelf or clipboard history.
+    @Published var openTab: NotchOpenTab = .shelf
 
     @Published var dragDetectorTargeting: Bool = false
     @Published var generalDropTargeting: Bool = false
@@ -25,6 +48,23 @@ class NotchViewModel: NSObject, ObservableObject {
     @Published var dropEvent: Bool = false
     @Published var anyDropZoneTargeting: Bool = false
     var cancellables: Set<AnyCancellable> = []
+
+    /// Tabs currently enabled by their settings toggles. Falls back to shelf
+    /// if both features are disabled (unlikely, but keeps the bar non-empty).
+    var enabledTabs: [NotchOpenTab] {
+        var tabs: [NotchOpenTab] = []
+        if Defaults[.boringShelf] { tabs.append(.shelf) }
+        if Defaults[.clipboardHistoryEnabled] { tabs.append(.clipboard) }
+        return tabs.isEmpty ? [.shelf] : tabs
+    }
+
+    /// Repairs openTab after a feature toggle disables the current tab.
+    func ensureValidTab() {
+        let shelfEnabled = Defaults[.boringShelf]
+        let clipboardEnabled = Defaults[.clipboardHistoryEnabled]
+        if !shelfEnabled && openTab == .shelf { openTab = .clipboard }
+        if !clipboardEnabled && openTab == .clipboard { openTab = .shelf }
+    }
 
     @Published var hideOnClosed: Bool = false
 
@@ -34,6 +74,11 @@ class NotchViewModel: NSObject, ObservableObject {
 
     @Published var notchSize: CGSize = getClosedNotchSize()
     @Published var closedNotchSize: CGSize = getClosedNotchSize()
+
+    /// Live clipboard history row count, kept in sync by ClipboardHistoryStore.
+    /// Non-isolated storage so the view model can size the notch without
+    /// crossing actor boundaries.
+    static var clipboardRowCount: Int = 0
 
     deinit {
         destroy()
@@ -59,7 +104,28 @@ class NotchViewModel: NSObject, ObservableObject {
             }
             .assign(to: \.anyDropZoneTargeting, on: self)
             .store(in: &cancellables)
+
+        // Switching tabs while open re-sizes the notch (clipboard is taller).
+        $openTab
+            .sink { [weak self] tab in
+                guard let self, self.notchState == .open else { return }
+                self.notchSize = tab == .clipboard
+                    ? CGSize(width: clipboardOpenNotchSize.width, height: self.clipboardOpenHeight())
+                    : openNotchSize
+            }
+            .store(in: &cancellables)
+
+        // Feature toggles may disable the currently selected tab.
+        for key in [Defaults.Keys.boringShelf, Defaults.Keys.clipboardHistoryEnabled] {
+            featureObservations.append(Defaults.observe(key) { [weak self] _ in
+                Task { @MainActor in
+                    self?.ensureValidTab()
+                }
+            })
+        }
     }
+
+    private var featureObservations: [Defaults.Observation] = []
 
     // Computed property for effective notch height
     var effectiveClosedNotchHeight: CGFloat {
@@ -101,11 +167,23 @@ class NotchViewModel: NSObject, ObservableObject {
     }
 
     func open() {
-        self.notchSize = openNotchSize
+        // Clipboard tab is adaptive: at least the shelf height (190), up to
+        // ~5 history rows (280). Fewer rows → shorter notch.
+        self.notchSize = openTab == .clipboard
+            ? CGSize(width: clipboardOpenNotchSize.width, height: clipboardOpenHeight())
+            : openNotchSize
         self.notchState = .open
 
         // Force music information update when notch is opened
         MusicManager.shared.forceUpdate()
+    }
+
+    /// Adaptive height for the clipboard tab.
+    private func clipboardOpenHeight() -> CGFloat {
+        let rowHeight: CGFloat = 42
+        let chromeHeight: CGFloat = 70 // header + search bar + spacing
+        let target = chromeHeight + CGFloat(Self.clipboardRowCount) * rowHeight
+        return min(clipboardOpenNotchSize.height, max(openNotchSize.height, target))
     }
 
     func close() {

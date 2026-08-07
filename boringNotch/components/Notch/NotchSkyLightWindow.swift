@@ -61,7 +61,11 @@ class NotchSkyLightWindow: NSPanel {
         level = .mainMenu + 3
         hasShadow = false
         isReleasedWhenClosed = false
-        
+
+        // Only become key when a control actually needs keyboard input
+        // (e.g. the clipboard search field); never steal focus otherwise.
+        becomesKeyOnlyIfNeeded = true
+
         // Force dark appearance regardless of system setting
         appearance = NSAppearance(named: .darkAqua)
         
@@ -109,6 +113,6 @@ class NotchSkyLightWindow: NSPanel {
     
     private var observers: Set<AnyCancellable> = []
     
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 }
