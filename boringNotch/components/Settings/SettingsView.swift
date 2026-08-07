@@ -31,6 +31,12 @@ struct SettingsView: View {
                 NavigationLink(value: "Clipboard") {
                     Label("剪贴板", systemImage: "clipboard")
                 }
+                NavigationLink(value: "Battery") {
+                    Label("电池", systemImage: "battery.100")
+                }
+                NavigationLink(value: "HUD") {
+                    Label("HUD", systemImage: "speaker.wave.2")
+                }
                 NavigationLink(value: "About") {
                     Label("关于", systemImage: "info.circle")
                 }
@@ -52,6 +58,10 @@ struct SettingsView: View {
                     Shelf()
                 case "Clipboard":
                     ClipboardSettings()
+                case "Battery":
+                    BatterySettings()
+                case "HUD":
+                    HUDSettings()
                 case "About":
                     About()
                 default:
@@ -521,6 +531,226 @@ struct ClipboardSettings: View {
         .quitToolbar()
         .accentColor(.effectiveAccent)
         .navigationTitle("Clipboard")
+    }
+}
+
+struct HUDSettings: View {
+    @Default(.hudReplacement) var hudReplacement
+    @Default(.inlineHUD) var inlineHUD
+    @Default(.enableGradient) var enableGradient
+    @Default(.systemEventIndicatorShadow) var systemEventIndicatorShadow
+    @Default(.systemEventIndicatorUseAccent) var systemEventIndicatorUseAccent
+    @Default(.showOpenNotchHUD) var showOpenNotchHUD
+    @Default(.showOpenNotchHUDPercentage) var showOpenNotchHUDPercentage
+    @Default(.showClosedNotchHUDPercentage) var showClosedNotchHUDPercentage
+    @Default(.optionKeyAction) var optionKeyAction
+
+    @State private var accessibilityAuthorized: Bool = false
+    @State private var monitoringTimer: Timer?
+
+    var body: some View {
+        Form {
+            Section {
+                if !accessibilityAuthorized {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("需要辅助功能权限")
+                            .font(.headline)
+                        Text("HUD 替换需要辅助功能权限来拦截系统媒体键并抑制原生 bezel。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 12) {
+                            Button("请求权限") {
+                                MediaKeyInterceptor.shared.requestAccessibilityAuthorization()
+                            }
+                            Button("打开系统设置") {
+                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            }
+                        }
+                        Text("提示：若未弹出授权窗口（多因之前拒绝过或换过构建版本），请手动在「系统设置 ▸ 隐私与安全性 ▸ 辅助功能」中启用 DropNest，然后重启本 App 才能生效。")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 4)
+                }
+                Defaults.Toggle(key: .hudReplacement) {
+                    Text("启用 HUD 替换")
+                }
+                .disabled(!accessibilityAuthorized)
+            } header: {
+                Text("主开关")
+            } footer: {
+                Text("启用后，按音量键时刘海会显示 HUD 而不是系统原生居中 bezel。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Picker("Option 键行为", selection: $optionKeyAction) {
+                    ForEach(OptionKeyAction.allCases) { action in
+                        Text(action.rawValue).tag(action)
+                    }
+                }
+                Defaults.Toggle(key: .enableGradient) {
+                    Text("渐变进度条")
+                }
+                Defaults.Toggle(key: .systemEventIndicatorShadow) {
+                    Text("进度条阴影")
+                }
+                Defaults.Toggle(key: .systemEventIndicatorUseAccent) {
+                    Text("使用强调色")
+                }
+            } header: {
+                Text("通用")
+            }
+            .disabled(!hudReplacement)
+
+            Section {
+                Defaults.Toggle(key: .showOpenNotchHUD) {
+                    Text("展开态显示 HUD")
+                }
+                Defaults.Toggle(key: .showOpenNotchHUDPercentage) {
+                    Text("展开态显示百分比")
+                }
+            } header: {
+                Text("展开态")
+            }
+            .disabled(!hudReplacement)
+
+            Section {
+                Picker("折叠态样式", selection: Binding(
+                    get: { inlineHUD ? "内联" : "默认" },
+                    set: { Defaults[.inlineHUD] = ($0 == "内联") }
+                )) {
+                    Text("默认").tag("默认")
+                    Text("内联").tag("内联")
+                }
+                Defaults.Toggle(key: .showClosedNotchHUDPercentage) {
+                    Text("折叠态显示百分比")
+                }
+            } header: {
+                Text("折叠态")
+            }
+            .disabled(!hudReplacement)
+        }
+        .quitToolbar()
+        .accentColor(.effectiveAccent)
+        .navigationTitle("HUD")
+        .task {
+            accessibilityAuthorized = MediaKeyInterceptor.isAccessibilityTrusted
+        }
+        .onAppear {
+            monitoringTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                let trusted = MediaKeyInterceptor.isAccessibilityTrusted
+                accessibilityAuthorized = trusted
+                // 授权到达后自动启动事件拦截（自愈：无需手动重开 App）
+                if trusted {
+                    Task { @MainActor in
+                        await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
+                    }
+                }
+                if trusted {
+                    monitoringTimer?.invalidate()
+                    monitoringTimer = nil
+                }
+            }
+        }
+        .onDisappear {
+            monitoringTimer?.invalidate()
+            monitoringTimer = nil
+        }
+    }
+}
+
+struct BatterySettings: View {
+    @Default(.showPowerStatusNotifications) var showPowerStatusNotifications
+    @Default(.showBatteryIndicator) var showBatteryIndicator
+    @Default(.showBatteryPercentage) var showBatteryPercentage
+    @Default(.showPowerStatusIcons) var showPowerStatusIcons
+    @ObservedObject var batteryModel = BatteryStatusViewModel.shared
+
+    var body: some View {
+        Form {
+            Section {
+                Defaults.Toggle(key: .showBatteryIndicator) {
+                    Text("展开态显示电池指示器")
+                }
+                Defaults.Toggle(key: .showBatteryPercentage) {
+                    Text("显示百分比")
+                }
+                .disabled(!showBatteryIndicator)
+                Defaults.Toggle(key: .showPowerStatusIcons) {
+                    Text("显示充电/插电图标")
+                }
+                .disabled(!showBatteryIndicator)
+            } header: {
+                Text("展开态指示器")
+            } footer: {
+                Text("展开刘海时，在右上角显示电池图标和百分比。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Defaults.Toggle(key: .showPowerStatusNotifications) {
+                    Text("电源状态变化通知")
+                }
+            } header: {
+                Text("折叠态通知")
+            } footer: {
+                Text("接入/断开电源、开始/停止充电、切换低电量模式时，刘海会短暂显示横向电池通知。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                HStack {
+                    Text("当前电量")
+                    Spacer()
+                    Text("\(Int(batteryModel.levelBattery))%")
+                        .foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text("最大容量")
+                    Spacer()
+                    Text("\(Int(batteryModel.maxCapacity))%")
+                        .foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text("电源状态")
+                    Spacer()
+                    Text(batteryModel.isPluggedIn ? "已连接" : "使用电池")
+                        .foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text("充电状态")
+                    Spacer()
+                    Text(batteryModel.isCharging ? "正在充电" : "未在充电")
+                        .foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text("低电量模式")
+                    Spacer()
+                    Text(batteryModel.isInLowPowerMode ? "开" : "关")
+                        .foregroundStyle(.secondary)
+                }
+                if batteryModel.timeToFullCharge > 0 {
+                    HStack {
+                        Text("充满剩余")
+                        Spacer()
+                        Text("\(batteryModel.timeToFullCharge) 分钟")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("实时状态")
+            }
+        }
+        .quitToolbar()
+        .accentColor(.effectiveAccent)
+        .navigationTitle("Battery")
     }
 }
 

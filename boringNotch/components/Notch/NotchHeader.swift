@@ -12,6 +12,7 @@ import SwiftUI
 struct NotchHeader: View {
     @EnvironmentObject var vm: NotchViewModel
     @ObservedObject var coordinator = NotchViewCoordinator.shared
+    @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     var body: some View {
         HStack(spacing: 0) {
             HStack {
@@ -35,23 +36,45 @@ struct NotchHeader: View {
 
             HStack(spacing: 4) {
                 if vm.notchState == .open {
-                    if Defaults[.settingsIconInNotch] {
-                        Button(action: {
-                            DispatchQueue.main.async {
-                                SettingsWindowController.shared.showWindow()
-                            }
-                        }) {
-                            Capsule()
-                                .fill(.black)
-                                .frame(width: 30, height: 30)
-                                .overlay {
-                                    Image(systemName: "gear")
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .imageScale(.medium)
+                    // 展开态 HUD（音量/亮度按键时显示）
+                    if isHUDType(coordinator.sneakPeek.type) && coordinator.sneakPeek.show && Defaults[.showOpenNotchHUD] {
+                        OpenNotchHUD(
+                            type: $coordinator.sneakPeek.type,
+                            value: $coordinator.sneakPeek.value,
+                            icon: $coordinator.sneakPeek.icon
+                        )
+                        .transition(.scale(scale: 0.8).combined(with: .opacity))
+                    } else {
+                        if Defaults[.settingsIconInNotch] {
+                            Button(action: {
+                                DispatchQueue.main.async {
+                                    SettingsWindowController.shared.showWindow()
                                 }
+                            }) {
+                                Capsule()
+                                    .fill(.black)
+                                    .frame(width: 30, height: 30)
+                                    .overlay {
+                                        Image(systemName: "gear")
+                                            .foregroundColor(.white)
+                                            .padding()
+                                            .imageScale(.medium)
+                                    }
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        if Defaults[.showBatteryIndicator] {
+                            BoringBatteryView(
+                                batteryWidth: 30,
+                                isCharging: batteryModel.isCharging,
+                                isInLowPowerMode: batteryModel.isInLowPowerMode,
+                                isPluggedIn: batteryModel.isPluggedIn,
+                                levelBattery: batteryModel.levelBattery,
+                                maxCapacity: batteryModel.maxCapacity,
+                                timeToFullCharge: batteryModel.timeToFullCharge,
+                                isForNotification: false
+                            )
+                        }
                     }
                 }
             }
@@ -100,6 +123,16 @@ struct NotchHeader: View {
             .foregroundStyle(selected ? .white : .gray)
         }
         .buttonStyle(.plain)
+    }
+
+    /// 判断是否为 HUD 类型（音量/亮度/背光）
+    private func isHUDType(_ type: SneakContentType) -> Bool {
+        switch type {
+        case .volume, .brightness, .backlight:
+            return true
+        default:
+            return false
+        }
     }
 }
 

@@ -65,6 +65,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             screenUnlockedObserver = nil
         }
         MusicManager.shared.destroy()
+        XPCHelperClient.shared.stopMonitoringAccessibilityAuthorization()
         cleanupDragDetectors()
         cleanupWindows()
     }
@@ -352,6 +353,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             _ = ClipboardMonitor.shared
             ClipboardQuickPanelController.shared.startIfEnabled()
+            // 电池状态监听（IOKit 沙盒内可用，无需额外权限）
+            _ = BatteryStatusViewModel.shared
+            // 音量管理器（CoreAudio 沙盒内可用）
+            _ = VolumeManager.shared
+            // 亮度/键盘背光管理器（通过 XPC Helper 访问私有框架）
+            _ = BrightnessManager.shared
+            _ = KeyboardBacklightManager.shared
+            // 启动辅助功能授权状态轮询
+            XPCHelperClient.shared.startMonitoringAccessibilityAuthorization()
         }
 
         previousScreens = NSScreen.screens

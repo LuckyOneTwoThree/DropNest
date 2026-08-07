@@ -68,6 +68,9 @@ class NotchViewModel: NSObject, ObservableObject {
 
     @Published var hideOnClosed: Bool = false
 
+    /// 电池弹层激活时阻止刘海自动收起。
+    @Published var isBatteryPopoverActive: Bool = false
+
     @Published var edgeAutoOpenActive: Bool = false
 
     @Published var screenUUID: String?
@@ -191,9 +194,21 @@ class NotchViewModel: NSObject, ObservableObject {
         if SharingStateManager.shared.preventNotchClose {
             return
         }
+        // Do not close while the battery popover is open
+        if isBatteryPopoverActive {
+            return
+        }
         self.notchSize = getClosedNotchSize(screenUUID: self.screenUUID)
         self.closedNotchSize = self.notchSize
         self.notchState = .closed
         self.edgeAutoOpenActive = false
+        // 收起时关闭电池横向通知
+        if coordinator.expandingView.show {
+            coordinator.toggleExpandingView(status: false, type: .battery)
+        }
+        // 收起时关闭 HUD
+        if coordinator.sneakPeek.show {
+            coordinator.sneakPeek.show = false
+        }
     }
 }

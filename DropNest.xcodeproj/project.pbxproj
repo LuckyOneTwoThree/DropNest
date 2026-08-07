@@ -77,9 +77,31 @@
 		A1C8B07B0006000000000000 /* ClipboardItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C8B07F0006000000000000 /* ClipboardItemView.swift */; };
 		A1C8B08SB000000000000000 /* ClipboardQuickPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C8B08SF000000000000000 /* ClipboardQuickPanelController.swift */; };
 		A1C8B08VB001000000000000 /* ClipboardQuickPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C8B08VF001000000000000 /* ClipboardQuickPanel.swift */; };
+		B7E5A3F92E8F12CC0015238C /* BatteryActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E5A3FA2E8F12CC0015238C /* BatteryActivityManager.swift */; };
+		B7E5A3FB2E8F12CC0015238C /* BatteryStatusViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E5A3FC2E8F12CC0015238C /* BatteryStatusViewModel.swift */; };
+		B7E5A3FD2E8F12CC0015238C /* BatteryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E5A3FE2E8F12CC0015238C /* BatteryView.swift */; };
+		C8F6B4E12E8F12CC0015238C /* VolumeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F6B4E22E8F12CC0015238C /* VolumeManager.swift */; };
+		C8F6B4E32E8F12CC0015238C /* MediaKeyInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F6B4E42E8F12CC0015238C /* MediaKeyInterceptor.swift */; };
+		C8F6B4E72E8F12CC0015238C /* SystemEventIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F6B4E82E8F12CC0015238C /* SystemEventIndicator.swift */; };
+		C8F6B4E92E8F12CC0015238C /* InlineHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F6B4EA2E8F12CC0015238C /* InlineHUD.swift */; };
+		C8F6B4EB2E8F12CC0015238C /* OpenNotchHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F6B4EC2E8F12CC0015238C /* OpenNotchHUD.swift */; };
+		D9E7C5F12E8F12CC0015238C /* BrightnessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E7C5F22E8F12CC0015238C /* BrightnessManager.swift */; };
+		D9E7C5F32E8F12CC0015238C /* XPCHelperClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E7C5F42E8F12CC0015238C /* XPCHelperClient.swift */; };
+		D9E7C5F52E8F12CC0015238C /* DropNestXPCHelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E7C5F62E8F12CC0015238C /* DropNestXPCHelperProtocol.swift */; };
+		E1F8D6A62E8F12CC0015238C /* DropNestXPCHelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F8D6A12E8F12CC0015238C /* DropNestXPCHelperProtocol.swift */; };
+		E1F8D6A72E8F12CC0015238C /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F8D6A22E8F12CC0015238C /* main.swift */; };
+		E1F8D6A82E8F12CC0015238C /* DropNestXPCHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F8D6A32E8F12CC0015238C /* DropNestXPCHelper.swift */; };
+		E1F8D6A92E8F12CC0015238C /* DropNestXPCHelper.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = E1F8D6A02E8F12CC0015238C /* DropNestXPCHelper.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy,); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		E1F8D6AE2E8F12CC0015238C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 14CEF40A2C5CAED200855D72 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E1F8D6AF2E8F12CC0015238C;
+			remoteInfo = DropNestXPCHelper;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -92,6 +114,17 @@
 				117AB5172E30E09C00558921 /* MediaRemoteAdapter.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		11F748412EC8051E00F841DB /* Embed XPC Services */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/XPCServices";
+			dstSubfolderSpec = 16;
+			files = (
+				E1F8D6A92E8F12CC0015238C /* DropNestXPCHelper.xpc in Embed XPC Services */,
+			);
+			name = "Embed XPC Services";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -168,6 +201,23 @@
 		A1C8B07F0006000000000000 /* ClipboardItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItemView.swift; sourceTree = "<group>"; };
 		A1C8B08SF000000000000000 /* ClipboardQuickPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardQuickPanelController.swift; sourceTree = "<group>"; };
 		A1C8B08VF001000000000000 /* ClipboardQuickPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardQuickPanel.swift; sourceTree = "<group>"; };
+		B7E5A3FA2E8F12CC0015238C /* BatteryActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryActivityManager.swift; sourceTree = "<group>"; };
+		B7E5A3FC2E8F12CC0015238C /* BatteryStatusViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryStatusViewModel.swift; sourceTree = "<group>"; };
+		B7E5A3FE2E8F12CC0015238C /* BatteryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryView.swift; sourceTree = "<group>"; };
+		C8F6B4E22E8F12CC0015238C /* VolumeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeManager.swift; sourceTree = "<group>"; };
+		C8F6B4E42E8F12CC0015238C /* MediaKeyInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyInterceptor.swift; sourceTree = "<group>"; };
+		C8F6B4E82E8F12CC0015238C /* SystemEventIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemEventIndicator.swift; sourceTree = "<group>"; };
+		C8F6B4EA2E8F12CC0015238C /* InlineHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlineHUD.swift; sourceTree = "<group>"; };
+		C8F6B4EC2E8F12CC0015238C /* OpenNotchHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenNotchHUD.swift; sourceTree = "<group>"; };
+		D9E7C5F22E8F12CC0015238C /* BrightnessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrightnessManager.swift; sourceTree = "<group>"; };
+		D9E7C5F42E8F12CC0015238C /* XPCHelperClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPCHelperClient.swift; sourceTree = "<group>"; };
+		D9E7C5F62E8F12CC0015238C /* DropNestXPCHelperProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropNestXPCHelperProtocol.swift; sourceTree = "<group>"; };
+		E1F8D6A02E8F12CC0015238C /* DropNestXPCHelper.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = DropNestXPCHelper.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
+		E1F8D6A12E8F12CC0015238C /* DropNestXPCHelperProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropNestXPCHelperProtocol.swift; sourceTree = "<group>"; };
+		E1F8D6A22E8F12CC0015238C /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		E1F8D6A32E8F12CC0015238C /* DropNestXPCHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropNestXPCHelper.swift; sourceTree = "<group>"; };
+		E1F8D6A42E8F12CC0015238C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		E1F8D6A52E8F12CC0015238C /* DropNestXPCHelper.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DropNestXPCHelper.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -186,6 +236,13 @@
 				112B0EBB2E30DD5000562D6C /* MediaRemoteAdapter.framework in Frameworks */,
 				14D0321A2C68F32E0096E6A1 /* LaunchAtLogin in Frameworks */,
 				B19016222CC15B3D00E3F12E /* Defaults in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E1F8D6AC2E8F12CC0015238C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -283,6 +340,7 @@
 			isa = PBXGroup;
 			children = (
 				111BE9942ECF2DEF0079DD4E /* DragDetector.swift */,
+				C8F6B4E42E8F12CC0015238C /* MediaKeyInterceptor.swift */,
 			);
 			path = observers;
 			sourceTree = "<group>";
@@ -306,6 +364,8 @@
 				B186542F2C6F455E000B926A /* Notch */,
 				9A0887332C7AFF7E00C160EA /* Tabs */,
 				B186542E2C6F453B000B926A /* Music */,
+				B7E5A3FF2E8F12CC0015238C /* Battery */,
+				C8F6B4ED2E8F12CC0015238C /* HUD */,
 			);
 			path = components;
 			sourceTree = "<group>";
@@ -315,6 +375,9 @@
 			children = (
 				112FB7342CCF16F70015238C /* NotchSpaceManager.swift */,
 				147163992C5D35FF0068B555 /* MusicManager.swift */,
+				B7E5A3FA2E8F12CC0015238C /* BatteryActivityManager.swift */,
+				C8F6B4E22E8F12CC0015238C /* VolumeManager.swift */,
+				D9E7C5F22E8F12CC0015238C /* BrightnessManager.swift */,
 			);
 			path = managers;
 			sourceTree = "<group>";
@@ -324,6 +387,7 @@
 			children = (
 				112B0EB62E30DD0F00562D6C /* mediaremote-adapter */,
 				14CEF4142C5CAED300855D72 /* boringNotch */,
+				E1F8D6AA2E8F12CC0015238C /* DropNestXPCHelper */,
 				14CEF4132C5CAED300855D72 /* Products */,
 				14D031EC2C689DB70096E6A1 /* Frameworks */,
 			);
@@ -333,6 +397,7 @@
 			isa = PBXGroup;
 			children = (
 				14CEF4122C5CAED300855D72 /* DropNest.app */,
+				E1F8D6A02E8F12CC0015238C /* DropNestXPCHelper.xpc */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -349,6 +414,7 @@
 				14D570BA2C5E98E30011E668 /* enums */,
 				14D570B72C5E98960011E668 /* animations */,
 				147163B52C5D804B0068B555 /* managers */,
+				D9E7C5F72E8F12CC0015238C /* XPCHelperClient */,
 				1153BD8E2D986B1F00979FB0 /* MediaControllers */,
 				B15063502C63D3F600EBB0E3 /* extensions */,
 				1471639B2C5D362F0068B555 /* components */,
@@ -406,6 +472,7 @@
 				B19016232CC15B4D00E3F12E /* Constants.swift */,
 				14D570C82C5F38890011E668 /* NotchViewModel.swift */,
 				1153BD902D986DB300979FB0 /* PlaybackState.swift */,
+				B7E5A3FC2E8F12CC0015238C /* BatteryStatusViewModel.swift */,
 			);
 			path = models;
 			sourceTree = "<group>";
@@ -542,6 +609,45 @@
 			path = Clipboard;
 			sourceTree = "<group>";
 		};
+		B7E5A3FF2E8F12CC0015238C /* Battery */ = {
+			isa = PBXGroup;
+			children = (
+				B7E5A3FE2E8F12CC0015238C /* BatteryView.swift */,
+			);
+			path = Battery;
+			sourceTree = "<group>";
+		};
+		C8F6B4ED2E8F12CC0015238C /* HUD */ = {
+			isa = PBXGroup;
+			children = (
+				C8F6B4E82E8F12CC0015238C /* SystemEventIndicator.swift */,
+				C8F6B4EA2E8F12CC0015238C /* InlineHUD.swift */,
+				C8F6B4EC2E8F12CC0015238C /* OpenNotchHUD.swift */,
+			);
+			path = HUD;
+			sourceTree = "<group>";
+		};
+		D9E7C5F72E8F12CC0015238C /* XPCHelperClient */ = {
+			isa = PBXGroup;
+			children = (
+				D9E7C5F42E8F12CC0015238C /* XPCHelperClient.swift */,
+				D9E7C5F62E8F12CC0015238C /* DropNestXPCHelperProtocol.swift */,
+			);
+			path = XPCHelperClient;
+			sourceTree = "<group>";
+		};
+		E1F8D6AA2E8F12CC0015238C /* DropNestXPCHelper */ = {
+			isa = PBXGroup;
+			children = (
+				E1F8D6A12E8F12CC0015238C /* DropNestXPCHelperProtocol.swift */,
+				E1F8D6A22E8F12CC0015238C /* main.swift */,
+				E1F8D6A32E8F12CC0015238C /* DropNestXPCHelper.swift */,
+				E1F8D6A42E8F12CC0015238C /* Info.plist */,
+				E1F8D6A52E8F12CC0015238C /* DropNestXPCHelper.entitlements */,
+			);
+			path = DropNestXPCHelper;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -572,6 +678,27 @@
 			productName = dynamicNotch;
 			productReference = 14CEF4122C5CAED300855D72 /* DropNest.app */;
 			productType = "com.apple.product-type.application";
+		};
+		E1F8D6AF2E8F12CC0015238C /* DropNestXPCHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E1F8D6B22E8F12CC0015238C /* Build configuration list for PBXNativeTarget "DropNestXPCHelper" */;
+			buildPhases = (
+				E1F8D6AB2E8F12CC0015238C /* Sources */,
+				E1F8D6AC2E8F12CC0015238C /* Frameworks */,
+				E1F8D6AD2E8F12CC0015238C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+			);
+			name = DropNestXPCHelper;
+			packageProductDependencies = (
+			);
+			productName = DropNestXPCHelper;
+			productReference = E1F8D6A02E8F12CC0015238C /* DropNestXPCHelper.xpc */;
+			productType = "com.apple.product-type.xpc-service";
 		};
 /* End PBXNativeTarget section */
 
@@ -608,6 +735,7 @@
 			projectRoot = "";
 			targets = (
 				14CEF4112C5CAED300855D72 /* boringNotch */,
+				E1F8D6AF2E8F12CC0015238C /* DropNestXPCHelper */,
 			);
 		};
 /* End PBXProject section */
@@ -622,6 +750,13 @@
 				112B0EB82E30DD0F00562D6C /* MediaRemoteAdapterTestClient in Resources */,
 				112B0EB92E30DD0F00562D6C /* mediaremote-adapter.pl in Resources */,
 				B17266E12C6532560031BA0D /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E1F8D6AD2E8F12CC0015238C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -692,12 +827,38 @@
 				14288E0C2C6F8EC000B9F80C /* AppIcons.swift in Sources */,
 				B19016242CC15B5000E3F12E /* Constants.swift in Sources */,
 				1100290C2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift in Sources */,
+				B7E5A3F92E8F12CC0015238C /* BatteryActivityManager.swift in Sources */,
+				B7E5A3FB2E8F12CC0015238C /* BatteryStatusViewModel.swift in Sources */,
+				B7E5A3FD2E8F12CC0015238C /* BatteryView.swift in Sources */,
+				C8F6B4E12E8F12CC0015238C /* VolumeManager.swift in Sources */,
+				C8F6B4E32E8F12CC0015238C /* MediaKeyInterceptor.swift in Sources */,
+				C8F6B4E72E8F12CC0015238C /* SystemEventIndicator.swift in Sources */,
+				C8F6B4E92E8F12CC0015238C /* InlineHUD.swift in Sources */,
+				C8F6B4EB2E8F12CC0015238C /* OpenNotchHUD.swift in Sources */,
+				D9E7C5F12E8F12CC0015238C /* BrightnessManager.swift in Sources */,
+				D9E7C5F32E8F12CC0015238C /* XPCHelperClient.swift in Sources */,
+				D9E7C5F52E8F12CC0015238C /* DropNestXPCHelperProtocol.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E1F8D6AB2E8F12CC0015238C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E1F8D6A62E8F12CC0015238C /* DropNestXPCHelperProtocol.swift in Sources */,
+				E1F8D6A72E8F12CC0015238C /* main.swift in Sources */,
+				E1F8D6A82E8F12CC0015238C /* DropNestXPCHelper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		11F7485A2EC9AABA00F841DB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E1F8D6AF2E8F12CC0015238C /* DropNestXPCHelper */;
+			targetProxy = E1F8D6AE2E8F12CC0015238C /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -924,6 +1085,64 @@
 			};
 			name = Release;
 		};
+		E1F8D6B02E8F12CC0015238C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DropNestXPCHelper/DropNestXPCHelper.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DropNestXPCHelper/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DropNestXPCHelper;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = theboringteam.boringnotch.DropNestXPCHelper;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = singlefile;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E1F8D6B12E8F12CC0015238C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DropNestXPCHelper/DropNestXPCHelper.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DropNestXPCHelper/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DropNestXPCHelper;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = theboringteam.boringnotch.DropNestXPCHelper;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -941,6 +1160,15 @@
 			buildConfigurations = (
 				14CEF4222C5CAED400855D72 /* Debug */,
 				14CEF4232C5CAED400855D72 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E1F8D6B22E8F12CC0015238C /* Build configuration list for PBXNativeTarget "DropNestXPCHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E1F8D6B02E8F12CC0015238C /* Debug */,
+				E1F8D6B12E8F12CC0015238C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

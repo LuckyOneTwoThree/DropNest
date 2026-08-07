@@ -34,6 +34,15 @@ enum WindowHeightMode: String, Defaults.Serializable {
     case custom = "Custom height"
 }
 
+/// 按住 Option 键时按媒体键的行为
+enum OptionKeyAction: String, CaseIterable, Identifiable, Defaults.Serializable {
+    case openSettings = "打开系统设置"
+    case showHUD = "显示 HUD"
+    case none = "无操作"
+
+    var id: String { self.rawValue }
+}
+
 extension Defaults.Keys {
     // MARK: General
     static let menubarIcon = Key<Bool>("menubarIcon", default: true)
@@ -94,6 +103,23 @@ extension Defaults.Keys {
     ])
     static let clipboardHotkeyEnabled = Key<Bool>("clipboardHotkeyEnabled", default: true)
     static let clipboardAutoPaste = Key<Bool>("clipboardAutoPaste", default: false) // 需辅助功能权限
+
+    // MARK: Battery
+    static let showPowerStatusNotifications = Key<Bool>("showPowerStatusNotifications", default: true)
+    static let showBatteryIndicator = Key<Bool>("showBatteryIndicator", default: true)
+    static let showBatteryPercentage = Key<Bool>("showBatteryPercentage", default: true)
+    static let showPowerStatusIcons = Key<Bool>("showPowerStatusIcons", default: true)
+
+    // MARK: HUD
+    static let hudReplacement = Key<Bool>("hudReplacement", default: false)
+    static let inlineHUD = Key<Bool>("inlineHUD", default: false)
+    static let enableGradient = Key<Bool>("enableGradient", default: false)
+    static let systemEventIndicatorShadow = Key<Bool>("systemEventIndicatorShadow", default: false)
+    static let systemEventIndicatorUseAccent = Key<Bool>("systemEventIndicatorUseAccent", default: false)
+    static let showOpenNotchHUD = Key<Bool>("showOpenNotchHUD", default: true)
+    static let showOpenNotchHUDPercentage = Key<Bool>("showOpenNotchHUDPercentage", default: true)
+    static let showClosedNotchHUDPercentage = Key<Bool>("showClosedNotchHUDPercentage", default: false)
+    static let optionKeyAction = Key<OptionKeyAction>("optionKeyAction", default: OptionKeyAction.openSettings)
 
     // MARK: Advanced Settings
     static let useCustomAccentColor = Key<Bool>("useCustomAccentColor", default: false)

@@ -9,3 +9,6 @@ xcuserdata/
 
 # macOS
 .DS_Store
+
+# 上游原始仓库残留（仅作移植参考，不纳入版本控制）
+boring.notch/

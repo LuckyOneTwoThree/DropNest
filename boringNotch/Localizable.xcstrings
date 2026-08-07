@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -102,6 +103,7 @@
       }
     },
     " – %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -202,6 +204,7 @@
       }
     },
     "'Now Playing' was the only option on previous versions and works with all media apps." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -402,6 +405,7 @@
       }
     },
     "%.0f seconds" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -602,6 +606,7 @@
       }
     },
     "%@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -802,6 +807,7 @@
       }
     },
     "%lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -900,6 +906,18 @@
           }
         }
       }
+    },
+    "%lld MB" : {
+
+    },
+    "%lld 分钟" : {
+
+    },
+    "%lld 条" : {
+
+    },
+    "%lld 项" : {
+
     },
     "%lld%%" : {
       "localizations" : {
@@ -1002,6 +1020,7 @@
       }
     },
     "• Bug fixes" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1102,6 +1121,7 @@
       }
     },
     "• Improved performance" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1202,6 +1222,7 @@
       }
     },
     "• New feature 1" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1300,6 +1321,18 @@
           }
         }
       }
+    },
+    "×%lld" : {
+
+    },
+    "1 天" : {
+
+    },
+    "7 天" : {
+
+    },
+    "30 天" : {
+
     },
     "About" : {
       "localizations" : {
@@ -1402,6 +1435,7 @@
       }
     },
     "Accent color" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1502,6 +1536,7 @@
       }
     },
     "Access Denied" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1602,6 +1637,7 @@
       }
     },
     "Accessibility access is required to replace the system HUD." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1702,6 +1738,7 @@
       }
     },
     "Add" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1903,6 +1940,7 @@
       }
     },
     "Add new visualizer" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2003,6 +2041,7 @@
       }
     },
     "Additional features" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2103,6 +2142,7 @@
       }
     },
     "Advanced" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2203,6 +2243,7 @@
       }
     },
     "All-day" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2303,6 +2344,7 @@
       }
     },
     "Allow Access" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2403,6 +2445,7 @@
       }
     },
     "Always show full event titles" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2503,6 +2546,7 @@
       }
     },
     "Always show tabs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2603,6 +2647,7 @@
       }
     },
     "App icon" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2803,6 +2848,7 @@
       }
     },
     "Auto-scroll to next event" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2903,6 +2949,7 @@
       }
     },
     "Automatically check for updates" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3003,6 +3050,7 @@
       }
     },
     "Automatically download updates" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3103,6 +3151,7 @@
       }
     },
     "Automatically switch displays" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3303,6 +3352,7 @@
       }
     },
     "Battery Information" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3403,6 +3453,7 @@
       }
     },
     "Battery Settings" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3503,6 +3554,7 @@
       }
     },
     "Battery Status" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3603,6 +3655,7 @@
       }
     },
     "Boost your productivity with Clipboard Manager" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3703,6 +3756,7 @@
       }
     },
     "Boring Notch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3803,6 +3857,7 @@
       }
     },
     "boring.notch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3903,6 +3958,7 @@
       }
     },
     "Calendar" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4003,6 +4059,7 @@
       }
     },
     "Calendar access is denied. Please enable it in System Settings." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4103,6 +4160,7 @@
       }
     },
     "Calendars" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4203,6 +4261,7 @@
       }
     },
     "Cancel" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4303,6 +4362,7 @@
       }
     },
     "Change media with horizontal gestures" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4403,6 +4463,7 @@
       }
     },
     "Charging" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4503,6 +4564,7 @@
       }
     },
     "Charging on Hold: Desktop Mode" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4603,6 +4665,7 @@
       }
     },
     "Check for Updates…" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4703,6 +4766,7 @@
       }
     },
     "Choose a Music Source" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4803,6 +4867,7 @@
       }
     },
     "Choose any color" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4903,6 +4968,7 @@
       }
     },
     "Choose between your system accent color or customize it with your own selection." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5003,6 +5069,7 @@
       }
     },
     "Choose which service to use when sharing files from the shelf. Click the shelf button to select files, or drag files onto it to share immediately." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5103,6 +5170,7 @@
       }
     },
     "Circle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5203,6 +5271,7 @@
       }
     },
     "Clear slot" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5302,7 +5371,11 @@
         }
       }
     },
+    "Clipboard" : {
+
+    },
     "Close" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5403,6 +5476,7 @@
       }
     },
     "Close gesture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5503,6 +5577,7 @@
       }
     },
     "Closed Notch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5603,6 +5678,7 @@
       }
     },
     "Color Presets" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5703,6 +5779,7 @@
       }
     },
     "Colored spectrogram" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5803,6 +5880,7 @@
       }
     },
     "Coming soon" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5903,6 +5981,7 @@
       }
     },
     "Continue" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6003,6 +6082,7 @@
       }
     },
     "Copy items on drag" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6103,6 +6183,7 @@
       }
     },
     "Corner radius scaling" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6203,6 +6284,7 @@
       }
     },
     "Currently selected: %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6303,6 +6385,7 @@
       }
     },
     "Custom" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6403,6 +6486,7 @@
       }
     },
     "Custom height" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6503,6 +6587,7 @@
       }
     },
     "Custom music live activity animation" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6603,6 +6688,7 @@
       }
     },
     "Custom notch size - %.0f" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6703,6 +6789,7 @@
       }
     },
     "Custom vizualizers (Lottie)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6803,6 +6890,7 @@
       }
     },
     "Customize in Settings" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6903,6 +6991,7 @@
       }
     },
     "Customize which controls appear in the music player. Volume expands when active." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7003,6 +7092,7 @@
       }
     },
     "Default" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7406,6 +7496,7 @@
       }
     },
     "Download" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7607,6 +7698,7 @@
       }
     },
     "Drag a control onto a slot" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7707,6 +7799,7 @@
       }
     },
     "Drag items in the preview to reorder or drop from the palette" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7807,6 +7900,7 @@
       }
     },
     "Drop files here" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7906,7 +8000,11 @@
         }
       }
     },
+    "DropNest" : {
+
+    },
     "Easily copy, store, and manage your most-used content. Upgrade now for advanced features like multi-item storage and quick access!" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8007,6 +8105,7 @@
       }
     },
     "Edit layout" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8107,6 +8206,7 @@
       }
     },
     "Enable blur effect behind album art" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8207,6 +8307,7 @@
       }
     },
     "Enable boring mirror" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8408,6 +8509,7 @@
       }
     },
     "Enable gestures" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8508,6 +8610,7 @@
       }
     },
     "Enable glowing effect" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8608,6 +8711,7 @@
       }
     },
     "Enable haptic feedback" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8708,6 +8812,7 @@
       }
     },
     "Enable shelf" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8808,6 +8913,7 @@
       }
     },
     "Enable window shadow" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8908,6 +9014,7 @@
       }
     },
     "Enhance your experience with HUDs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9008,6 +9115,7 @@
       }
     },
     "Enjoy your free time!" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9108,6 +9216,7 @@
       }
     },
     "Expanded drag detection area" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9208,6 +9317,7 @@
       }
     },
     "Extend hover area" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9409,6 +9519,7 @@
       }
     },
     "Files dropped on the shelf will be shared via this service" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9509,6 +9620,7 @@
       }
     },
     "Finish" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9609,6 +9721,7 @@
       }
     },
     "Full screen behavior" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9809,6 +9922,7 @@
       }
     },
     "Gesture control" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9909,6 +10023,7 @@
       }
     },
     "Gesture sensitivity" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10009,6 +10124,7 @@
       }
     },
     "Get started" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10109,6 +10225,7 @@
       }
     },
     "GitHub" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10209,6 +10326,7 @@
       }
     },
     "Got it!" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10309,6 +10427,7 @@
       }
     },
     "Gradient" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10409,6 +10528,7 @@
       }
     },
     "Hide all-day events" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10509,6 +10629,7 @@
       }
     },
     "Hide completed reminders" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10609,6 +10730,7 @@
       }
     },
     "Hide for all apps" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10709,6 +10831,7 @@
       }
     },
     "Hide for media app only" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10809,6 +10932,7 @@
       }
     },
     "Hide from screen recording" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10909,6 +11033,7 @@
       }
     },
     "Hide title bar" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11009,6 +11134,7 @@
       }
     },
     "Hierarchical" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11109,6 +11235,7 @@
       }
     },
     "High" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11209,6 +11336,7 @@
       }
     },
     "Hover delay" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11309,6 +11437,7 @@
       }
     },
     "https://github.com/pear-devs/pear-desktop" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11408,7 +11537,11 @@
         }
       }
     },
+    "HUD" : {
+
+    },
     "HUD style" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11508,7 +11641,11 @@
         }
       }
     },
+    "HUD 替换需要辅助功能权限来拦截系统媒体键并抑制原生 bezel。" : {
+
+    },
     "HUDs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11609,6 +11746,7 @@
       }
     },
     "In progress" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11709,6 +11847,7 @@
       }
     },
     "Inline" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11910,6 +12049,7 @@
       }
     },
     "Layout Preview" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12010,6 +12150,7 @@
       }
     },
     "Lottie JSON URL" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12110,6 +12251,7 @@
       }
     },
     "Low" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12210,6 +12352,7 @@
       }
     },
     "Low Power Mode" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12310,6 +12453,7 @@
       }
     },
     "Made with 🫶🏻 by not so boring not.people" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12410,6 +12554,7 @@
       }
     },
     "Mark as complete" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12510,6 +12655,7 @@
       }
     },
     "Mark as incomplete" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12610,6 +12756,7 @@
       }
     },
     "Match menu bar height" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12710,6 +12857,7 @@
       }
     },
     "Match menubar height" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12810,6 +12958,7 @@
       }
     },
     "Match real notch height" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12910,6 +13059,7 @@
       }
     },
     "Max Capacity: %lld%%" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13110,6 +13260,7 @@
       }
     },
     "Media controls" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13210,6 +13361,7 @@
       }
     },
     "Media inactivity timeout" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13310,6 +13462,7 @@
       }
     },
     "Media playback live activity" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13410,6 +13563,7 @@
       }
     },
     "Media Source" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13510,6 +13664,7 @@
       }
     },
     "Medium" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13610,6 +13765,7 @@
       }
     },
     "Mic %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13710,6 +13866,7 @@
       }
     },
     "Mirror" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13810,6 +13967,7 @@
       }
     },
     "Mirror shape" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13910,6 +14068,7 @@
       }
     },
     "More" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14010,6 +14169,7 @@
       }
     },
     "Music Source" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14110,6 +14270,7 @@
       }
     },
     "muted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14210,6 +14371,7 @@
       }
     },
     "Muted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14310,6 +14472,7 @@
       }
     },
     "Name" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14410,6 +14573,7 @@
       }
     },
     "Never hide" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14510,6 +14674,7 @@
       }
     },
     "No custom animation available" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14610,6 +14775,7 @@
       }
     },
     "No custom visualizer" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14710,6 +14876,7 @@
       }
     },
     "No events" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14810,6 +14977,7 @@
       }
     },
     "No events today" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15011,6 +15179,7 @@
       }
     },
     "Not Now" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15111,6 +15280,7 @@
       }
     },
     "Notch behavior" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15211,6 +15381,7 @@
       }
     },
     "Notch height on non-notch displays" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15311,6 +15482,7 @@
       }
     },
     "Notch height on notch displays" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15411,6 +15583,7 @@
       }
     },
     "Notch sizing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15511,6 +15684,7 @@
       }
     },
     "Open Calendar Settings" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15611,6 +15785,7 @@
       }
     },
     "Open Notch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15711,6 +15886,7 @@
       }
     },
     "Open notch on hover" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15811,6 +15987,7 @@
       }
     },
     "Open Reminder Settings" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15911,6 +16088,7 @@
       }
     },
     "Open shelf by default if items are present" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16011,6 +16189,7 @@
       }
     },
     "Option key behaviour" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16110,7 +16289,11 @@
         }
       }
     },
+    "Option 键行为" : {
+
+    },
     "Pick a Color" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16211,6 +16394,7 @@
       }
     },
     "Plugged In" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16311,6 +16495,7 @@
       }
     },
     "Preferred display" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16411,6 +16596,7 @@
       }
     },
     "Progress bar style" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16511,6 +16697,7 @@
       }
     },
     "Quick Share" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16611,6 +16798,7 @@
       }
     },
     "Quick Share Service" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16711,6 +16899,7 @@
       }
     },
     "Quit" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16811,6 +17000,7 @@
       }
     },
     "Quit app" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16911,6 +17101,7 @@
       }
     },
     "Release name" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17011,6 +17202,7 @@
       }
     },
     "Remember last tab" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17111,6 +17303,7 @@
       }
     },
     "Reminder access is denied. Please enable it in System Settings." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17211,6 +17404,7 @@
       }
     },
     "Reminders" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17311,6 +17505,7 @@
       }
     },
     "Remove from shelf after dragging" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17411,6 +17606,7 @@
       }
     },
     "Replace system HUD" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17511,6 +17707,7 @@
       }
     },
     "Replaces the standard macOS volume, display brightness, and keyboard brightness HUDs with a custom design." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17611,6 +17808,7 @@
       }
     },
     "Request Accessibility" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17711,6 +17909,7 @@
       }
     },
     "Reset to Defaults" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -17912,6 +18111,7 @@
       }
     },
     "Restart Boring Notch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -18113,6 +18313,7 @@
       }
     },
     "Select the music source you want to use. You can change this later in the app settings." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -18213,6 +18414,7 @@
       }
     },
     "selected" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -18313,6 +18515,7 @@
       }
     },
     "Selected animation" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -18413,6 +18616,7 @@
       }
     },
     "Settings" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -18613,6 +18817,7 @@
       }
     },
     "Shortcuts" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -18713,6 +18918,7 @@
       }
     },
     "Show battery indicator" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -18813,6 +19019,7 @@
       }
     },
     "Show battery percentage" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -18913,6 +19120,7 @@
       }
     },
     "Show calendar" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -19013,6 +19221,7 @@
       }
     },
     "Show cool face animation while inactive" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -19113,6 +19322,7 @@
       }
     },
     "Show HUD in open notch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -19213,6 +19423,7 @@
       }
     },
     "Show lyrics below artist name" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -19313,6 +19524,7 @@
       }
     },
     "Show menu bar icon" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -19413,6 +19625,7 @@
       }
     },
     "Show music live activity" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -19513,6 +19726,7 @@
       }
     },
     "Show notch on lock screen" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -19613,6 +19827,7 @@
       }
     },
     "Show on all displays" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -19713,6 +19928,7 @@
       }
     },
     "Show percentage" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -19813,6 +20029,7 @@
       }
     },
     "Show power status icons" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -19913,6 +20130,7 @@
       }
     },
     "Show power status notifications" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -20013,6 +20231,7 @@
       }
     },
     "Show settings icon in notch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -20113,6 +20332,7 @@
       }
     },
     "Show sneak peek on playback changes" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -20213,6 +20433,7 @@
       }
     },
     "Slider color" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -20313,6 +20534,7 @@
       }
     },
     "Sneak Peek shows the media title and artist under the notch for a few seconds." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -20413,6 +20635,7 @@
       }
     },
     "Sneak Peek Style" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -20513,6 +20736,7 @@
       }
     },
     "Software updates" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -20613,6 +20837,7 @@
       }
     },
     "Speed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -20713,6 +20938,7 @@
       }
     },
     "Square" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -21015,6 +21241,7 @@
       }
     },
     "System" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -21115,6 +21342,7 @@
       }
     },
     "System features" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -21215,6 +21443,7 @@
       }
     },
     "Time to Full Charge: %lld min" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -21315,6 +21544,7 @@
       }
     },
     "Tint progress bar with accent color" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -21415,6 +21645,7 @@
       }
     },
     "Toggle Notch Open:" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -21515,6 +21746,7 @@
       }
     },
     "Toggle Sneak Peek:" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -21615,6 +21847,7 @@
       }
     },
     "Two-finger swipe up on notch to close, two-finger swipe down on notch to open when **Open notch on hover** option is disabled" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -21816,6 +22049,7 @@
       }
     },
     "Unlock advanced features and improve your experience. Upgrade now for more customizations!" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -21916,6 +22150,7 @@
       }
     },
     "unmuted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -22016,6 +22251,7 @@
       }
     },
     "Unmuted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -22116,6 +22352,7 @@
       }
     },
     "Upgrade to Pro" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -22216,6 +22453,7 @@
       }
     },
     "Use music visualizer spectrogram" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -22316,6 +22554,7 @@
       }
     },
     "Use your macOS system accent color" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -22416,6 +22655,7 @@
       }
     },
     "Using System Accent" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -22516,6 +22756,7 @@
       }
     },
     "Version" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -22616,6 +22857,7 @@
       }
     },
     "Version info" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -22716,6 +22958,7 @@
       }
     },
     "View on GitHub: pear-devs/pear-desktop" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -22816,6 +23059,7 @@
       }
     },
     "Welcome" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -22916,6 +23160,7 @@
       }
     },
     "What's New" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -23016,6 +23261,7 @@
       }
     },
     "Window Appearance" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -23116,6 +23362,7 @@
       }
     },
     "Window Behavior" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -23216,6 +23463,7 @@
       }
     },
     "You can now enjoy the app. If you want to tweak things further, you can always visit the settings." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -23316,6 +23564,7 @@
       }
     },
     "You're All Set!" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -23416,6 +23665,7 @@
       }
     },
     "Your macOS system accent color" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -23516,6 +23766,7 @@
       }
     },
     "YouTube Music requires this third-party app to be installed: " : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -23614,6 +23865,402 @@
           }
         }
       }
+    },
+    "中" : {
+
+    },
+    "主开关" : {
+
+    },
+    "低" : {
+
+    },
+    "低电量模式" : {
+
+    },
+    "使用强调色" : {
+
+    },
+    "使用电池" : {
+
+    },
+    "使用自定义强调色" : {
+
+    },
+    "保留时长" : {
+
+    },
+    "充满剩余" : {
+
+    },
+    "充满剩余: %lld 分钟" : {
+
+    },
+    "充电暂停: 桌面模式" : {
+
+    },
+    "充电状态" : {
+
+    },
+    "关" : {
+
+    },
+    "关于" : {
+
+    },
+    "关闭手势" : {
+
+    },
+    "内联" : {
+
+    },
+    "最大容量" : {
+
+    },
+    "最大容量: %lld%%" : {
+
+    },
+    "刘海尺寸" : {
+
+    },
+    "刘海行为" : {
+
+    },
+    "刘海高度（刘海屏）" : {
+
+    },
+    "刘海高度（非刘海屏）" : {
+
+    },
+    "删除" : {
+
+    },
+    "剪贴板" : {
+
+    },
+    "匹配真实刘海高度" : {
+
+    },
+    "匹配菜单栏高度" : {
+
+    },
+    "单条大小上限" : {
+
+    },
+    "历史容量" : {
+
+    },
+    "取消置顶" : {
+
+    },
+    "启用 HUD 替换" : {
+
+    },
+    "启用剪贴板历史" : {
+
+    },
+    "启用后，按音量键时刘海会显示 HUD 而不是系统原生居中 bezel。" : {
+
+    },
+    "启用手势" : {
+
+    },
+    "启用文件架" : {
+
+    },
+    "启用触感反馈" : {
+
+    },
+    "启用阴影" : {
+
+    },
+    "在刘海双指上滑关闭，双指下滑打开（当 **悬停展开刘海** 关闭时生效）。\n剪贴板历史页签展开时下滑手势自动禁用，避免与滚动历史冲突。" : {
+
+    },
+    "在刘海显示媒体状态" : {
+
+    },
+    "在刘海显示设置图标" : {
+
+    },
+    "在所有显示器上显示" : {
+
+    },
+    "外观" : {
+
+    },
+    "媒体" : {
+
+    },
+    "媒体状态条" : {
+
+    },
+    "实时状态" : {
+
+    },
+    "容量" : {
+
+    },
+    "展开刘海时，在右上角显示电池图标和百分比。" : {
+
+    },
+    "展开态" : {
+
+    },
+    "展开态指示器" : {
+
+    },
+    "展开态显示 HUD" : {
+
+    },
+    "展开态显示电池指示器" : {
+
+    },
+    "展开态显示百分比" : {
+
+    },
+    "展开时缩放圆角" : {
+
+    },
+    "已连接" : {
+
+    },
+    "已连接电源" : {
+
+    },
+    "已静音" : {
+
+    },
+    "开" : {
+
+    },
+    "强调色" : {
+
+    },
+    "当前剪贴板内容" : {
+
+    },
+    "当前电量" : {
+
+    },
+    "彩色频谱" : {
+
+    },
+    "快捷键呼出快速面板（⌃⌥V）" : {
+
+    },
+    "快速查看" : {
+
+    },
+    "快速面板" : {
+
+    },
+    "忽略的应用" : {
+
+    },
+    "悬停展开刘海" : {
+
+    },
+    "悬停延迟" : {
+
+    },
+    "手势控制" : {
+
+    },
+    "手势灵敏度" : {
+
+    },
+    "打开系统设置" : {
+
+    },
+    "扩大拖拽检测区域" : {
+
+    },
+    "把文件拖到这里" : {
+
+    },
+    "折叠态" : {
+
+    },
+    "折叠态显示百分比" : {
+
+    },
+    "折叠态样式" : {
+
+    },
+    "折叠态通知" : {
+
+    },
+    "拖出后从文件架移除" : {
+
+    },
+    "拖拽时复制文件" : {
+
+    },
+    "接入/断开电源、开始/停止充电、切换低电量模式时，刘海会短暂显示横向电池通知。" : {
+
+    },
+    "提示：若未弹出授权窗口（多因之前拒绝过或换过构建版本），请手动在「系统设置 ▸ 隐私与安全性 ▸ 辅助功能」中启用 DropNest，然后重启本 App 才能生效。" : {
+
+    },
+    "搜索剪贴板历史" : {
+
+    },
+    "播放媒体时，刘海会显示当前曲目（封面 + 动态频谱）。" : {
+
+    },
+    "播放暂停后，媒体状态条保留的时间。" : {
+
+    },
+    "文件架" : {
+
+    },
+    "显示充电/插电图标" : {
+
+    },
+    "显示百分比" : {
+
+    },
+    "显示菜单栏图标" : {
+
+    },
+    "暂停后空闲超时 - %.0f 秒" : {
+
+    },
+    "有文件时默认展开文件架" : {
+
+    },
+    "未在充电" : {
+
+    },
+    "来自这些应用的复制内容不会被记录。密码管理器（如 1Password）复制的内容始终自动跳过。" : {
+
+    },
+    "正在充电" : {
+
+    },
+    "永不过期" : {
+
+    },
+    "没有匹配的剪贴板记录" : {
+
+    },
+    "添加" : {
+
+    },
+    "添加 Bundle ID（如 com.example.app）" : {
+
+    },
+    "清空" : {
+
+    },
+    "清空全部剪贴板历史" : {
+
+    },
+    "清空文件架全部内容" : {
+
+    },
+    "渐变进度条" : {
+
+    },
+    "源已失效" : {
+
+    },
+    "版本" : {
+
+    },
+    "版本信息" : {
+
+    },
+    "版本名称" : {
+
+    },
+    "电池" : {
+
+    },
+    "电池状态" : {
+
+    },
+    "电池设置" : {
+
+    },
+    "电源状态" : {
+
+    },
+    "电源状态变化通知" : {
+
+    },
+    "确认清空？" : {
+
+    },
+    "空闲行为" : {
+
+    },
+    "系统功能" : {
+
+    },
+    "置顶" : {
+
+    },
+    "自动切换显示器" : {
+
+    },
+    "自动粘贴需要「辅助功能」权限；未授权时仅复制到剪贴板，可手动 ⌘V 粘贴。" : {
+
+    },
+    "自定义刘海高度 - %.0f" : {
+
+    },
+    "自定义高度" : {
+
+    },
+    "记录图片" : {
+
+    },
+    "记录复制的文本、图片和文件引用，随时从历史中取回。文件只记录引用，不复制内容。" : {
+
+    },
+    "记录文件引用" : {
+
+    },
+    "设置" : {
+
+    },
+    "请求权限" : {
+
+    },
+    "超出容量时自动淘汰最旧的记录；置顶（Pin）的记录不会被淘汰。" : {
+
+    },
+    "进度条阴影" : {
+
+    },
+    "退出" : {
+
+    },
+    "退出应用" : {
+
+    },
+    "选中后自动粘贴到当前应用" : {
+
+    },
+    "通用" : {
+
+    },
+    "重启 DropNest" : {
+
+    },
+    "需要辅助功能权限" : {
+
+    },
+    "首选显示器" : {
+
+    },
+    "高" : {
+
+    },
+    "默认" : {
+
     }
   },
   "version" : "1.0"

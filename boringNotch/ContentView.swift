@@ -16,6 +16,7 @@ struct ContentView: View {
     @EnvironmentObject var vm: NotchViewModel
     @ObservedObject var coordinator = NotchViewCoordinator.shared
     @ObservedObject var musicManager = MusicManager.shared
+    @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @State private var hoverTask: Task<Void, Never>?
     @State private var isHovering: Bool = false
     @State private var anyDropDebounceTask: Task<Void, Never>?
@@ -47,7 +48,12 @@ struct ContentView: View {
     private var computedChinWidth: CGFloat {
         var chinWidth: CGFloat = vm.closedNotchSize.width
 
-        if vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle)
+        // 电池横向通知优先级最高，扩展到展开态宽度
+        if coordinator.expandingView.type == .battery && coordinator.expandingView.show
+            && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
+        {
+            chinWidth = 640
+        } else if vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle)
             && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed
         {
             chinWidth += (2 * max(0, vm.effectiveClosedNotchHeight - 12) + 20)
@@ -213,7 +219,49 @@ struct ContentView: View {
     func NotchLayout() -> some View {
         VStack(alignment: .leading) {
             VStack(alignment: .leading) {
-                if vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle)
+                // 电池横向通知（电源/充电/低功耗变化时短闪）
+                if coordinator.expandingView.type == .battery && coordinator.expandingView.show
+                    && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
+                {
+                    HStack(spacing: 0) {
+                        HStack {
+                            Text(batteryModel.statusText)
+                                .font(.subheadline)
+                                .foregroundStyle(.white)
+                        }
+
+                        Rectangle()
+                            .fill(.black)
+                            .frame(width: vm.closedNotchSize.width + 10)
+
+                        HStack {
+                            BoringBatteryView(
+                                batteryWidth: 30,
+                                isCharging: batteryModel.isCharging,
+                                isInLowPowerMode: batteryModel.isInLowPowerMode,
+                                isPluggedIn: batteryModel.isPluggedIn,
+                                levelBattery: batteryModel.levelBattery,
+                                isForNotification: true
+                            )
+                        }
+                        .frame(width: 76, alignment: .trailing)
+                    }
+                    .frame(height: vm.effectiveClosedNotchHeight, alignment: .center)
+                } else if coordinator.sneakPeek.show && Defaults[.inlineHUD]
+                    && coordinator.sneakPeek.type != .music
+                    && coordinator.sneakPeek.type != .battery
+                    && vm.notchState == .closed
+                {
+                    // 折叠态内联 HUD（音量/亮度/背光）
+                    InlineHUD(
+                        type: $coordinator.sneakPeek.type,
+                        value: $coordinator.sneakPeek.value,
+                        icon: $coordinator.sneakPeek.icon,
+                        hoverAnimation: $isHovering,
+                        gestureProgress: $gestureProgress
+                    )
+                    .transition(.opacity)
+                } else if vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle)
                     && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed
                 {
                     MusicLiveActivity()
@@ -224,6 +272,33 @@ struct ContentView: View {
                         .opacity(gestureProgress != 0 ? 1.0 - min(abs(gestureProgress) * 0.1, 0.3) : 1.0)
                 } else {
                     Rectangle().fill(.clear).frame(width: vm.closedNotchSize.width - 20, height: vm.effectiveClosedNotchHeight)
+                }
+
+                // 折叠态非内联 HUD（默认样式，在刘海下方显示进度条）
+                if coordinator.sneakPeek.show
+                    && coordinator.sneakPeek.type != .music
+                    && coordinator.sneakPeek.type != .battery
+                    && !Defaults[.inlineHUD]
+                    && vm.notchState == .closed
+                {
+                    SystemEventIndicatorModifier(
+                        eventType: $coordinator.sneakPeek.type,
+                        value: $coordinator.sneakPeek.value,
+                        icon: $coordinator.sneakPeek.icon,
+                        sendEventBack: { newVal in
+                            switch coordinator.sneakPeek.type {
+                            case .volume:
+                                VolumeManager.shared.setAbsolute(Float32(newVal))
+                            case .brightness:
+                                BrightnessManager.shared.setAbsolute(value: Float32(newVal))
+                            case .backlight:
+                                KeyboardBacklightManager.shared.setAbsolute(value: Float32(newVal))
+                            default:
+                                break
+                            }
+                        }
+                    )
+                    .padding(.bottom, 10)
                 }
             }
             .zIndex(2)
@@ -360,6 +435,7 @@ struct ContentView: View {
             }
 
             guard vm.notchState == .closed,
+                  !coordinator.sneakPeek.show,
                   Defaults[.openNotchOnHover] else { return }
 
             hoverTask = Task {
@@ -382,7 +458,10 @@ struct ContentView: View {
                     withAnimation(animationSpring) {
                         self.isHovering = false
 
-                        if self.vm.notchState == .open && !SharingStateManager.shared.preventNotchClose {
+                        if self.vm.notchState == .open
+                            && !SharingStateManager.shared.preventNotchClose
+                            && !self.vm.isBatteryPopoverActive
+                        {
                             self.vm.close()
                         }
                     }
