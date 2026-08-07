@@ -2,7 +2,7 @@
 
 > 把 MacBook 的刘海（Notch）变成一块实用的悬浮面板：拖文件暂存、看正在播放的音乐。
 
-DropNest 是一个基于 [boring.notch](https://github.com/TheBoredTeam/boringnotch) **深度裁剪**而来的个人项目。在保留刘海窗口这个核心形态的前提下，只留下两个最常用的能力——**文件拖放暂存（Shelf）** 与 **媒体播放状态监听（Now Playing）**，去掉了原版里所有花哨的附属功能。
+DropNest 是一个基于 [boring.notch](https://github.com/TheBoredTeam/boringnotch) 派生的个人项目。在保留刘海窗口这一核心形态的基础上，将功能聚焦于两项最常用的能力——**文件拖放暂存（Shelf）** 与 **媒体播放状态监听（Now Playing）**，对原项目的其余模块做了精简。
 
 > ⚠️ **许可证说明**：本仓库从 boring.notch 派生，而 boring.notch 采用 **GPL-3.0** 许可。根据 GPL 的「衍生作品」条款，DropNest 同样以 **GPL-3.0** 发布，且必须保留原许可证与版权信息。详见仓库根目录的 `LICENSE` 与 `THIRD_PARTY_LICENSES`。
 
@@ -54,10 +54,11 @@ DropNest 是一个基于 [boring.notch](https://github.com/TheBoredTeam/boringno
 
 提供独立的设置窗口（通用 / 外观 / 媒体 / 文件架 / 关于 等分页），可微调刘海行为、外观、媒体显示与 Shelf 相关选项，并支持**登录时自动启动**。
 
-### 已移除的原版功能
+### 与原版（boring.notch）的功能范围差异
 
-> 下列功能在原 boring.notch 中存在，已在 DropNest 中裁剪掉，以保持轻量：
+> 出于个人使用场景的取舍，DropNest 未包含原 boring.notch 中的以下模块：
 > 日历 / 提醒事项、电池指示、摄像头镜像、系统 HUD 替换、下载指示器、歌词与可视化器、自动更新、Onboarding 引导等。
+> 这些能力在原项目中同样完善，仅是本个人分支未纳入，以让体量更精简、更聚焦于核心场景。
 
 ---
 
