@@ -1,0 +1,11 @@
+# 工作区数据（编译日志、裁剪方案、记忆），不纳入版本控制
+.workbuddy/
+
+# Xcode / Swift 构建产物
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+
+# macOS
+.DS_Store
