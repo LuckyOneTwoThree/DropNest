@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/version-2.7.3-green" alt="Version">
 </p>
 
-> ⚠️ **许可证**：本项目派生自 [boring.notch](https://github.com/TheBoredTeam/boringnotch)（GPL-3.0）。依据 GPL「衍生作品」条款，DropNest 同样以 **GPL-3.0** 发布，必须保留原许可证与版权信息。详见 [`LICENSE`](LICENSE) 与 [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES)。
+> ⚠️ **许可证**：本项目派生自 [boring.notch](https://github.com/TheBoredTeam/boring.notch)（GPL-3.0）。依据 GPL「衍生作品」条款，DropNest 同样以 **GPL-3.0** 发布，必须保留原许可证与版权信息。详见 [`LICENSE`](LICENSE) 与 [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES)。
 
 ---
 
@@ -277,6 +277,6 @@ A：在设置中调整「拖拽检测区域」的大小与灵敏度。
 
 ## 致谢
 
-- [TheBoredTeam/boring.notch](https://github.com/TheBoredTeam/boringnotch) —— DropNest 的源头项目，提供了刘海窗口的完整思路与实现基础。
+- [TheBoredTeam/boring.notch](https://github.com/TheBoredTeam/boring.notch) —— DropNest 的源头项目，提供了刘海窗口的完整思路与实现基础。
 - [ungive/mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) —— 系统级媒体状态获取能力。
 - [Lakr233/SkyLightWindow](https://github.com/Lakr233/SkyLightWindow)、[sindresorhus/Defaults](https://github.com/sindresorhus/Defaults)、[sindresorhus/LaunchAtLogin-Modern](https://github.com/sindresorhus/LaunchAtLogin-Modern)、[swiftlang/swift-syntax](https://github.com/swiftlang/swift-syntax) —— 本项目依赖的开源库。
