@@ -265,6 +265,18 @@ A：在设置中调整「拖拽检测区域」的大小与灵敏度。
 
 ---
 
+## 贡献
+
+欢迎参与 DropNest 的开发与完善！无论是报告 Bug、提出功能建议，还是提交代码，我们都非常感谢。
+
+- 📘 **贡献指南**：[CONTRIBUTING.md](CONTRIBUTING.md) — 开发环境、构建、代码规范、提交信息约定与 PR 流程。
+- 🐛 **报告问题**：请使用仓库的 [Bug Report 模板](.github/ISSUE_TEMPLATE/bug_report.yml)。
+- 💡 **功能建议**：请使用 [Feature Request 模板](.github/ISSUE_TEMPLATE/feature_request.yml)。
+- 🤝 **行为准则**：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
+- 🔒 **安全漏洞**：请按 [SECURITY.md](SECURITY.md) 私报告知，**勿公开提 Issue**。
+
+---
+
 ## 许可证
 
 本项目以 **GNU General Public License v3.0（GPL-3.0）** 发布。

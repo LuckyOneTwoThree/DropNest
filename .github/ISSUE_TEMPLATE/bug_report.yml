@@ -1,0 +1,78 @@
+name: 🐛 Bug 报告 (Bug Report)
+description: 报告 DropNest 使用中遇到的异常或错误
+title: "[Bug] 简要描述问题"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽量填写以下信息，帮助我们快速复现与定位问题。
+        💡 安全相关的问题**请勿**在此提交，请按 [SECURITY.md](../../SECURITY.md) 私报告知。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: ❗ 问题描述
+      description: 清晰、简洁地描述你遇到的问题。
+      placeholder: 例如：拖文件到刘海后，面板展开但文件未收入 Shelf。
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: ❗ 复现步骤
+      description: 一步一步列出如何触发该问题。
+      placeholder: |
+        1. 启动 DropNest
+        2. 从访达拖一个文件到屏幕顶部刘海区域
+        3. 松开鼠标
+        4. 观察……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 你认为「应该」发生什么。
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么（如有报错信息请粘贴）。
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: ❗ 环境信息
+      description: 你的运行环境。
+      placeholder: |
+        - macOS 版本：例如 macOS 15.2 Sequoia
+        - DropNest 版本：例如 2.7.3（设置 → 关于）
+        - 芯片：Apple Silicon / Intel
+        - 安装方式：Release DMG / 源码构建
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 崩溃报告
+      description: 如有控制台日志、崩溃报告，请粘贴（可隐藏敏感路径）。
+      render: shell
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有 Issue，确认这不是重复报告
+          required: true
+        - label: 我已阅读 README 的「常见问题」章节
+          required: true
