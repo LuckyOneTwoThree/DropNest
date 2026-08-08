@@ -52,6 +52,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// 闭包式 NotificationCenter observer token 集中存放，退出时统一注销
     private var notificationObservers: [Any] = []
     private var dragDetectors: [String: DragDetector] = [:] // UUID -> DragDetector
+    private var windowObservers: [NSWindow: Any] = [:] // NSWindow -> Observer Token
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false
@@ -148,19 +149,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             windows.values.forEach { window in
                 window.close()
                 NotchSpaceManager.shared.notchSpace.windows.remove(window)
+                if let obs = windowObservers[window] {
+                    NotificationCenter.default.removeObserver(obs)
+                    windowObservers.removeValue(forKey: window)
+                }
             }
             windows.removeAll()
             viewModels.removeAll()
-            if let obs = windowScreenDidChangeObserver {
-                NotificationCenter.default.removeObserver(obs)
-                windowScreenDidChangeObserver = nil
-            }
         } else if let window = window {
             window.close()
             NotchSpaceManager.shared.notchSpace.windows.remove(window)
-            if let obs = windowScreenDidChangeObserver {
+            if let obs = windowObservers[window] {
                 NotificationCenter.default.removeObserver(obs)
-                windowScreenDidChangeObserver = nil
+                windowObservers.removeValue(forKey: window)
             }
             self.window = nil
         }
@@ -287,11 +288,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotchSpaceManager.shared.notchSpace.windows.insert(window)
 
         // Observe when the window's screen changes so we can update drag detectors.
-        // 先移除旧 observer，避免重复创建窗口时泄漏上一个 token。
-        if let old = windowScreenDidChangeObserver {
+        // 先移除旧 observer，避免重复创建窗口时泄漏。
+        if let old = windowObservers[window] {
             NotificationCenter.default.removeObserver(old)
         }
-        windowScreenDidChangeObserver = NotificationCenter.default.addObserver(
+        windowObservers[window] = NotificationCenter.default.addObserver(
             forName: NSWindow.didChangeScreenNotification,
             object: window,
             queue: .main) { [weak self] _ in
@@ -323,7 +324,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// 防止多实例并发读写同一容器内的 items.json / blobs 造成数据损坏。
     private func enforceSingleInstance() {
         let mine = ProcessInfo.processInfo.processIdentifier
-        let bundleID = Bundle.main.bundleIdentifier ?? ""
+        guard let bundleID = Bundle.main.bundleIdentifier, !bundleID.isEmpty else { return }
         for app in NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
         where app.processIdentifier != mine {
             app.terminate()

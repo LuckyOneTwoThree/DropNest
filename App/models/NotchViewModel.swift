@@ -106,8 +106,7 @@ class NotchViewModel: NSObject, ObservableObject {
             .map { shelf, drag, general in
                 shelf || drag || general
             }
-            .assign(to: \.anyDropZoneTargeting, on: self)
-            .store(in: &cancellables)
+            .assign(to: &$anyDropZoneTargeting)
 
         // Switching tabs while open re-sizes the notch (clipboard is taller).
         $openTab
