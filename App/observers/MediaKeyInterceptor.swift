@@ -25,6 +25,9 @@ final class MediaKeyInterceptor {
 
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    /// 定期自检 tap 健康状态，系统睡眠唤醒/显示器重连等边缘场景下 tap 可能被
+    /// 静默禁用且不触发回调，导致媒体键静默失效。每 30s 检查并重新启用。
+    private var healthCheckTimer: Timer?
     private let step: Float = 1.0 / 16.0
     private var audioPlayer: AVAudioPlayer?
 
@@ -120,10 +123,13 @@ final class MediaKeyInterceptor {
                 CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
             }
             CGEvent.tapEnable(tap: eventTap, enable: true)
+            startHealthCheck()
         }
     }
 
     func stop() {
+        healthCheckTimer?.invalidate()
+        healthCheckTimer = nil
         if let eventTap {
             CGEvent.tapEnable(tap: eventTap, enable: false)
         }
@@ -132,6 +138,23 @@ final class MediaKeyInterceptor {
         }
         runLoopSource = nil
         eventTap = nil
+    }
+
+    /// 定期自检 tap 健康状态。系统在睡眠唤醒、显示器重连等边缘场景下可能禁用
+    /// tap 但不触发 .tapDisabledByTimeout 回调，导致媒体键静默失效（需重启 App）。
+    /// 每 30s 检查一次，若 tap 被禁用则重新启用。stop() 会先 invalidate 定时器
+    /// 再置空 eventTap，避免定时器在停止后仍尝试重新启用已释放的 tap。
+    private func startHealthCheck() {
+        let timer = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let tap = self.eventTap else { return }
+                if !CGEvent.tapIsEnabled(tap: tap) {
+                    CGEvent.tapEnable(tap: tap, enable: true)
+                }
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        healthCheckTimer = timer
     }
 
     // MARK: - Event Handling
@@ -217,18 +240,18 @@ final class MediaKeyInterceptor {
         }
     }
 
-    private func handleOptionAction(for keyType: NXKeyType, command: Bool) -> Bool {
+    /// 执行 Option 键自定义动作。仅在 optionKeyAction != .none 时被 dispatch
+    /// （见 synchronousDecision），故 .none 分支不可达，保留为防御性 no-op。
+    private func handleOptionAction(for keyType: NXKeyType, command: Bool) {
         let action = Defaults[.optionKeyAction]
 
         switch action {
         case .openSettings:
             openSystemSettings(for: keyType, command: command)
-            return true
         case .showHUD:
             showHUD(for: keyType, command: command)
-            return true
         case .none:
-            return true
+            break
         }
     }
 
@@ -288,19 +311,13 @@ final class MediaKeyInterceptor {
 
         switch keyType {
         case .soundUp:
-            Task { @MainActor in
-                self.playFeedbackSound()
-                VolumeManager.shared.increase(stepDivisor: stepDivisor)
-            }
+            playFeedbackSound()
+            VolumeManager.shared.increase(stepDivisor: stepDivisor)
         case .soundDown:
-            Task { @MainActor in
-                self.playFeedbackSound()
-                VolumeManager.shared.decrease(stepDivisor: stepDivisor)
-            }
+            playFeedbackSound()
+            VolumeManager.shared.decrease(stepDivisor: stepDivisor)
         case .mute:
-            Task { @MainActor in
-                VolumeManager.shared.toggleMuteAction()
-            }
+            VolumeManager.shared.toggleMuteAction()
         case .brightnessUp, .keyboardBrightnessUp:
             let delta = step / stepDivisor
             adjustBrightness(delta: delta, keyboard: keyType == .keyboardBrightnessUp || command)
@@ -310,30 +327,26 @@ final class MediaKeyInterceptor {
         }
     }
 
-    /// 调节亮度/背光
+    /// 调节亮度/背光（executeAsync 已在 @MainActor 上，无需再嵌套 Task）
     private func adjustBrightness(delta: Float, keyboard: Bool) {
-        Task { @MainActor in
-            if keyboard {
-                KeyboardBacklightManager.shared.setRelative(delta: delta)
-            } else {
-                BrightnessManager.shared.setRelative(delta: delta)
-            }
+        if keyboard {
+            KeyboardBacklightManager.shared.setRelative(delta: delta)
+        } else {
+            BrightnessManager.shared.setRelative(delta: delta)
         }
     }
 
     private func showHUD(for keyType: NXKeyType, command: Bool) {
-        Task { @MainActor in
-            switch keyType {
-            case .soundUp, .soundDown, .mute:
-                let v = VolumeManager.shared.rawVolume
-                NotchViewCoordinator.shared.toggleSneakPeek(status: true, type: .volume, value: CGFloat(v))
-            case .brightnessUp, .brightnessDown:
-                let v = BrightnessManager.shared.rawBrightness
-                NotchViewCoordinator.shared.toggleSneakPeek(status: true, type: .brightness, value: CGFloat(v))
-            case .keyboardBrightnessUp, .keyboardBrightnessDown:
-                let v = KeyboardBacklightManager.shared.rawBrightness
-                NotchViewCoordinator.shared.toggleSneakPeek(status: true, type: .backlight, value: CGFloat(v))
-            }
+        switch keyType {
+        case .soundUp, .soundDown, .mute:
+            let v = VolumeManager.shared.rawVolume
+            NotchViewCoordinator.shared.toggleSneakPeek(status: true, type: .volume, value: CGFloat(v))
+        case .brightnessUp, .brightnessDown:
+            let v = BrightnessManager.shared.rawBrightness
+            NotchViewCoordinator.shared.toggleSneakPeek(status: true, type: .brightness, value: CGFloat(v))
+        case .keyboardBrightnessUp, .keyboardBrightnessDown:
+            let v = KeyboardBacklightManager.shared.rawBrightness
+            NotchViewCoordinator.shared.toggleSneakPeek(status: true, type: .backlight, value: CGFloat(v))
         }
     }
 

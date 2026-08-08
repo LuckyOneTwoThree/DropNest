@@ -56,17 +56,30 @@ enum ShelfItemKind: Codable, Equatable, Sendable {
 /// key 用书签数据本身：书签刷新（stale refresh 写回新 bookmark）后 key 变化，
 /// 自动失效重新解析。只缓存成功案例，失败路径每次重试。
 ///
+/// TTL 机制：每条缓存项 30 秒后自动失效。书签虽能跟踪文件移动/改名，但缓存了
+/// 解析结果后不再重新 resolve，会导致文件改名后展示名/URL 仍指向旧路径（P0 回归）。
+/// 30s TTL 兼顾性能（滚动爆发期命中率高）与时效（改名后最多 30s 自动修正）。
+///
 /// 非 @MainActor：用 NSLock 保护内部字典，可在任意线程安全访问。
 /// 解耦自 ViewModel 单例，使 ShelfItem 的 fileURL/cleanupStoredData 不再依赖 MainActor。
 final class ShelfItemResolutionCache {
     static let shared = ShelfItemResolutionCache()
 
+    /// 带 TTL 的时间戳包装
+    private struct Timed<Value> {
+        let value: Value
+        let storedAt: Date
+    }
+
+    /// 缓存 TTL：30 秒后自动失效，重新解析书签
+    private let ttl: TimeInterval = 30
+
     /// bookmark data → (url, refreshedBookmark)
-    private var contexts: [Data: (url: URL, bookmark: Data)] = [:]
+    private var contexts: [Data: Timed<(url: URL, bookmark: Data)>] = [:]
     /// bookmark data → 展示名
-    private var displayNames: [Data: String] = [:]
+    private var displayNames: [Data: Timed<String>] = [:]
     /// 文件路径 → 图标
-    private var icons: [String: NSImage] = [:]
+    private var icons: [String: Timed<NSImage>] = [:]
 
     /// 简单容量保护：超限时整体清空（代价仅是重新解析一轮）
     private let maxEntries = 1000
@@ -75,35 +88,52 @@ final class ShelfItemResolutionCache {
 
     func cachedContext(for bookmarkData: Data) -> (url: URL, bookmark: Data)? {
         lock.lock(); defer { lock.unlock() }
-        return contexts[bookmarkData]
+        guard let entry = contexts[bookmarkData], !isExpired(entry) else {
+            // 过期项惰性清除
+            contexts.removeValue(forKey: bookmarkData)
+            return nil
+        }
+        return entry.value
     }
 
     func storeContext(_ context: (url: URL, bookmark: Data), for bookmarkData: Data) {
         lock.lock(); defer { lock.unlock() }
         if contexts.count > maxEntries { contexts.removeAll(keepingCapacity: true) }
-        contexts[bookmarkData] = context
+        contexts[bookmarkData] = Timed(value: context, storedAt: Date())
     }
 
     func cachedDisplayName(for bookmarkData: Data) -> String? {
         lock.lock(); defer { lock.unlock() }
-        return displayNames[bookmarkData]
+        guard let entry = displayNames[bookmarkData], !isExpired(entry) else {
+            displayNames.removeValue(forKey: bookmarkData)
+            return nil
+        }
+        return entry.value
     }
 
     func storeDisplayName(_ name: String, for bookmarkData: Data) {
         lock.lock(); defer { lock.unlock() }
         if displayNames.count > maxEntries { displayNames.removeAll(keepingCapacity: true) }
-        displayNames[bookmarkData] = name
+        displayNames[bookmarkData] = Timed(value: name, storedAt: Date())
     }
 
     func cachedIcon(forPath path: String) -> NSImage? {
         lock.lock(); defer { lock.unlock() }
-        return icons[path]
+        guard let entry = icons[path], !isExpired(entry) else {
+            icons.removeValue(forKey: path)
+            return nil
+        }
+        return entry.value
     }
 
     func storeIcon(_ icon: NSImage, forPath path: String) {
         lock.lock(); defer { lock.unlock() }
         if icons.count > maxEntries { icons.removeAll(keepingCapacity: true) }
-        icons[path] = icon
+        icons[path] = Timed(value: icon, storedAt: Date())
+    }
+
+    private func isExpired<V>(_ entry: Timed<V>) -> Bool {
+        return Date().timeIntervalSince(entry.storedAt) > ttl
     }
 }
 
@@ -193,17 +223,11 @@ struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
     }
 
     /// 文件 URL（解析 bookmark，不依赖 ViewModel 单例）。
-    /// stale refresh 写回逻辑保留在 ShelfStateViewModel.resolveFileURL/resolveAndUpdateBookmark，
+    /// stale refresh 写回逻辑在 ShelfStateViewModel.resolveAndUpdateBookmark，
     /// 供需要更新 items 数组的场景调用；本属性只读 URL。
     var fileURL: URL? {
         guard case let .file(bookmarkData) = kind else { return nil }
         return resolvedContext(for: bookmarkData)?.url
-    }
-
-    var URL: URL? {
-        if case let .file(bookmark) = kind { return resolvedContext(for: bookmark)?.url }
-        else if case let .link(url) = kind { return url }
-        else { return nil }
     }
 
     @MainActor

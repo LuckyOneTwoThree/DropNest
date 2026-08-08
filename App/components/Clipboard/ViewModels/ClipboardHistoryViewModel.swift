@@ -56,14 +56,15 @@ final class ClipboardHistoryViewModel: ObservableObject {
     /// Pinned first, then by recency (store order), optionally filtered.
     /// `query` overrides the view model's own searchText (used by the quick panel).
     ///
+    /// Store 本身已按 recency 维护（新条目 insert at: 0，dedup 也 bump 到头部），
+    /// 故用稳定分区（pinned 前置）而非 sort——避免相同 lastCopiedAt 的条目被
+    /// 不稳定排序打乱顺序（同一瞬间快速复制多条时）。
+    ///
     /// - Note: The main history view consumes `cachedDisplayedItems` (kept fresh
     ///   via `refreshDisplayedItems`). This method is retained for internal cache
     ///   recomputation and for the quick panel, which passes its own `query`.
     func displayedItems(from items: [ClipboardItem], query: String? = nil) -> [ClipboardItem] {
-        let sorted = items.sorted { lhs, rhs in
-            if lhs.isPinned != rhs.isPinned { return lhs.isPinned }
-            return lhs.lastCopiedAt > rhs.lastCopiedAt
-        }
+        let sorted = items.filter { $0.isPinned } + items.filter { !$0.isPinned }
         let effective = (query ?? searchText).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !effective.isEmpty else { return sorted }
         let lower = effective.lowercased()

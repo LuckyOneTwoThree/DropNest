@@ -20,6 +20,9 @@ final class VolumeManager: NSObject, ObservableObject {
     // 硬件不支持 mute 时的软件降级
     private var previousVolumeBeforeMute: Float32 = 0.2
     private var softwareMuted: Bool = false
+    /// 缓存当前默认输出设备 ID，避免每次读写/静音判断都做 CoreAudio 属性查询。
+    /// 在 handleDefaultDeviceChange（默认设备变化回调）中置 nil 失效。
+    private var cachedDeviceID: AudioObjectID?
 
     private override init() {
         super.init()
@@ -97,6 +100,9 @@ final class VolumeManager: NSObject, ObservableObject {
 
     // MARK: - CoreAudio Helpers
     private func systemOutputDeviceID() -> AudioObjectID {
+        if let cached = cachedDeviceID, cached != kAudioObjectUnknown {
+            return cached
+        }
         var defaultDeviceID = kAudioObjectUnknown
         var propertyAddress = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDefaultOutputDevice,
@@ -113,6 +119,9 @@ final class VolumeManager: NSObject, ObservableObject {
             &defaultDeviceID
         )
         if status != noErr { return kAudioObjectUnknown }
+        if defaultDeviceID != kAudioObjectUnknown {
+            cachedDeviceID = defaultDeviceID
+        }
         return defaultDeviceID
     }
 
@@ -128,16 +137,13 @@ final class VolumeManager: NSObject, ObservableObject {
         }
         if !volumes.isEmpty {
             let avg = max(0, min(1, volumes.reduce(0, +) / Float32(volumes.count)))
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                if self.rawVolume != avg {
-                    if self.didInitialFetch {
-                        self.lastChangeAt = Date()
-                    }
-                }
-                self.rawVolume = avg
-                self.didInitialFetch = true
+            // 类已 @MainActor，listener block 经 Task { @MainActor in } 调度至此，
+            // 无需再 DispatchQueue.main.async 二次跳转（会让 @Published 变更延后一个 runloop）
+            if rawVolume != avg && didInitialFetch {
+                lastChangeAt = Date()
             }
+            rawVolume = avg
+            didInitialFetch = true
         }
 
         var muteAddr = AudioObjectPropertyAddress(
@@ -155,11 +161,8 @@ final class VolumeManager: NSObject, ObservableObject {
                 if AudioObjectGetPropertyData(deviceID, &muteAddr, 0, nil, &mSize, &muted) == noErr
                 {
                     let newMuted = muted != 0
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self else { return }
-                        if self.isMuted != newMuted { self.lastChangeAt = Date() }
-                        self.isMuted = newMuted
-                    }
+                    if isMuted != newMuted { lastChangeAt = Date() }
+                    isMuted = newMuted
                 }
             }
         }
@@ -178,16 +181,17 @@ final class VolumeManager: NSObject, ObservableObject {
         )
         AudioObjectAddPropertyListenerBlock(
             AudioObjectID(kAudioObjectSystemObject), &defaultDevAddr, nil
-        ) { _, _ in
-            Task { @MainActor in self.handleDefaultDeviceChange() }
+        ) { [weak self] _, _ in
+            Task { @MainActor in self?.handleDefaultDeviceChange() }
         }
 
         // 设备级：注册当前默认设备的 volume/mute listener
         registerDeviceListeners()
     }
 
-    /// 默认输出设备变化时，移除旧设备 listener，注册新设备 listener，并拉取当前音量。
+    /// 默认输出设备变化时，失效 deviceID 缓存，移除旧设备 listener，注册新设备 listener，并拉取当前音量。
     private func handleDefaultDeviceChange() {
+        cachedDeviceID = nil
         unregisterDeviceListeners()
         registerDeviceListeners()
         fetchCurrentVolume()
@@ -230,8 +234,8 @@ final class VolumeManager: NSObject, ObservableObject {
 
     /// 注册单个属性监听并保存 block 引用，以便后续精确移除。
     private func addDeviceListener(deviceID: AudioObjectID, address: AudioObjectPropertyAddress) {
-        let block: AudioObjectPropertyListenerBlock = { _, _ in
-            Task { @MainActor in self.fetchCurrentVolume() }
+        let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+            Task { @MainActor in self?.fetchCurrentVolume() }
         }
         var addr = address
         AudioObjectAddPropertyListenerBlock(deviceID, &addr, nil, block)
@@ -381,11 +385,9 @@ final class VolumeManager: NSObject, ObservableObject {
     }
 
     private func publish(volume: Float32, muted: Bool, touchDate: Bool) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            if touchDate { self.lastChangeAt = Date() }
-            self.rawVolume = volume
-            self.isMuted = muted
-        }
+        // 类已 @MainActor，所有调用方均在 MainActor 上，无需 dispatch 到主线程
+        if touchDate { lastChangeAt = Date() }
+        rawVolume = volume
+        isMuted = muted
     }
 }

@@ -115,10 +115,6 @@ final class ShelfStateViewModel: ObservableObject {
         items.filter { $0.groupID == groupID }
     }
 
-    // Queue for deferred bookmark updates to avoid publishing during view updates
-    private var pendingBookmarkUpdates: [ShelfItem.ID: Data] = [:]
-    private var updateTask: Task<Void, Never>?
-
     private init() {
         items = ShelfPersistenceService.shared.load()
     }
@@ -140,14 +136,24 @@ final class ShelfStateViewModel: ObservableObject {
     }
 
     func remove(_ item: ShelfItem) {
-        let removedGroupID = item.groupID
-        items.removeAll { $0.id == item.id }
+        remove([item])
+    }
+
+    /// 批量移除条目：单次 items 变更（仅触发一次 @Published didSet 持久化）、
+    /// 单个后台清理 task、统一空组检查。避免循环 remove(item) 导致 N 次持久化与 N 个 detached task。
+    func remove(_ items: [ShelfItem]) {
+        guard !items.isEmpty else { return }
+        let idsToRemove = Set(items.map { $0.id })
+        let affectedGroupIDs = Set(items.compactMap { $0.groupID })
+        self.items.removeAll { idsToRemove.contains($0.id) }
         // 临时文件清理在后台线程执行（cleanupStoredData 已解耦 @MainActor）
         Task.detached(priority: .utility) {
-            item.cleanupStoredData()
+            for item in items {
+                item.cleanupStoredData()
+            }
         }
-        // 删除后若所属组已空，关闭对应桌面巢（避免残留"载入中"空巢）
-        if let gid = removedGroupID, !items.contains(where: { $0.groupID == gid }) {
+        // 统一检查受影响组是否已空，关闭对应桌面巢（避免残留"载入中"空巢）
+        for gid in affectedGroupIDs where !self.items.contains(where: { $0.groupID == gid }) {
             expandedGroupIDs.remove(gid)
             Task { @MainActor in
                 FloatingNestManager.shared.closePanel(for: gid)
@@ -174,27 +180,6 @@ final class ShelfStateViewModel: ObservableObject {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         if case .file = items[idx].kind {
             items[idx].kind = .file(bookmark: bookmark)
-        }
-    }
-
-    private func scheduleDeferredBookmarkUpdate(for item: ShelfItem, bookmark: Data) {
-        pendingBookmarkUpdates[item.id] = bookmark
-        
-        // Cancel existing task and schedule a new one
-        updateTask?.cancel()
-        updateTask = Task { @MainActor [weak self] in
-            await Task.yield()
-            
-            guard let self = self else { return }
-            
-            for (itemID, bookmarkData) in self.pendingBookmarkUpdates {
-                if let idx = self.items.firstIndex(where: { $0.id == itemID }),
-                   case .file = self.items[idx].kind {
-                    self.items[idx].kind = .file(bookmark: bookmarkData)
-                }
-            }
-            
-            self.pendingBookmarkUpdates.removeAll()
         }
     }
 
@@ -235,38 +220,43 @@ final class ShelfStateViewModel: ObservableObject {
         }
     }
 
+    /// 清理失效书签条目。书签解析与 fileExists 是磁盘 I/O，必须离开主线程。
+    /// 变化判断：仅当确实存在失效条目时才回写 items，避免无谓的 @Published didSet
+    /// 触发持久化与全量重绘。
     func cleanupInvalidItems() {
-        Task { [weak self] in
-            guard let self else { return }
-            var keep: [ShelfItem] = []
-            for item in self.items {
-                switch item.kind {
-                case .file(let data):
-                    let bookmark = Bookmark(data: data)
-                    if await bookmark.validate() {
-                        keep.append(item)
-                    } else {
-                        item.cleanupStoredData()
+        let snapshot = items  // MainActor 上快照（Sendable 值类型）
+        Task.detached(priority: .utility) { [weak self] in
+            var invalidIDs: Set<UUID> = []
+            var invalid: [ShelfItem] = []
+            for item in snapshot {
+                guard case .file(let data) = item.kind else { continue }
+                let bookmark = Bookmark(data: data)
+                // validate() 标记 async 但内部为同步磁盘 I/O，后台执行不阻塞主线程
+                if await bookmark.validate() { continue }
+                invalidIDs.insert(item.id)
+                invalid.append(item)
+            }
+            // 无失效条目则不触碰 items，避免无谓持久化与重绘
+            guard !invalidIDs.isEmpty else { return }
+            // cleanupStoredData 已解耦 @MainActor，可在后台调用
+            for item in invalid {
+                item.cleanupStoredData()
+            }
+            // 用失效 id 集合过滤当前 items（而非快照），保留并发增删期间的新增项
+            await MainActor.run {
+                self?.items.removeAll { invalidIDs.contains($0.id) }
+                // 关闭因清理而变空的桌面巢
+                let affectedGroupIDs = Set(invalid.compactMap { $0.groupID })
+                for gid in affectedGroupIDs where !(self?.items.contains(where: { $0.groupID == gid }) ?? false) {
+                    self?.expandedGroupIDs.remove(gid)
+                    Task { @MainActor in
+                        FloatingNestManager.shared.closePanel(for: gid)
                     }
-                default:
-                    keep.append(item)
                 }
             }
-            await MainActor.run { self.items = keep }
         }
     }
 
-
-    func resolveFileURL(for item: ShelfItem) -> URL? {
-        guard case .file(let bookmarkData) = item.kind else { return nil }
-        let bookmark = Bookmark(data: bookmarkData)
-        let result = bookmark.resolve()
-        if let refreshed = result.refreshedData, refreshed != bookmarkData {
-            NSLog("Bookmark for \(item) stale; refreshing")
-            scheduleDeferredBookmarkUpdate(for: item, bookmark: refreshed)
-        }
-        return result.url
-    }
 
     func resolveAndUpdateBookmark(for item: ShelfItem) -> URL? {
         guard case .file(let bookmarkData) = item.kind else { return nil }
@@ -277,13 +267,5 @@ final class ShelfStateViewModel: ObservableObject {
             updateBookmark(for: item, bookmark: refreshed)
         }
         return result.url
-    }
-
-    func resolveFileURLs(for items: [ShelfItem]) -> [URL] {
-        var urls: [URL] = []
-        for it in items {
-            if let u = resolveFileURL(for: it) { urls.append(u) }
-        }
-        return urls
     }
 }

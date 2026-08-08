@@ -325,9 +325,7 @@ private struct GroupCardDragHandler: NSViewRepresentable {
 
             // Auto-remove group items from shelf if enabled and drag succeeded
             if Defaults[.autoRemoveShelfItems] && !operation.isEmpty {
-                for member in members {
-                    ShelfStateViewModel.shared.remove(member)
-                }
+                ShelfStateViewModel.shared.remove(members)
             }
         }
 

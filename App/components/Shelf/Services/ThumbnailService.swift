@@ -76,13 +76,16 @@ actor ThumbnailService {
     }
 
     func clearCache(for url: URL) {
-        let prefix = url.path
+        // 缓存键格式为 "path|WxH|stamp"，直接用 path 做前缀会误伤同前缀文件
+        // （如 "/a/b.txt" 会匹配到 "/a/b.txt.bak" 的缩略图）。
+        // 追加分隔符 "|" 确保只精确匹配该路径的键。
+        let prefix = url.path + "|"
         let toRemove = cacheKeys.filter { $0.hasPrefix(prefix) }
         for key in toRemove {
             cache.removeObject(forKey: key as NSString)
         }
         cacheKeys.subtract(toRemove)
-        mtimeMemo.removeValue(forKey: prefix)
+        mtimeMemo.removeValue(forKey: url.path)
     }
 
     // MARK: - Private Methods

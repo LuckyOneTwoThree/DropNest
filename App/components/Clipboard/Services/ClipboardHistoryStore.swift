@@ -27,6 +27,9 @@ final class ClipboardHistoryStore: ObservableObject {
     private let fileURL: URL
 
     private var saveTask: Task<Void, Never>?
+    /// 定期清理过期条目。pruneExpired 仅在启动加载时调用一次，长期运行（不重启）
+    /// 会导致过期条目一直占用内存与磁盘。每 10 分钟检查一次（retentionDays=0 时跳过）。
+    private var pruneTimer: Timer?
 
     /// 标记历史是否已从磁盘加载完成。加载完成前 items 为空，
     /// 启动瞬间复制的新条目会在 finishInitialLoad 中与磁盘历史合并。
@@ -57,6 +60,13 @@ final class ClipboardHistoryStore: ObservableObject {
             let loaded = Self.load(from: url)
             await self?.finishInitialLoad(loaded)
         }
+
+        // 定期清理过期条目（每 10 分钟）。retentionDays=0 时 pruneExpired 内部跳过。
+        let timer = Timer(timeInterval: 600, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.pruneExpired() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        pruneTimer = timer
     }
 
     /// 主线程收尾：合并磁盘历史与加载期间的新插入，再裁剪。
@@ -95,7 +105,10 @@ final class ClipboardHistoryStore: ObservableObject {
             )
 
             // blob 写盘（后台）。若主线程判重命中，这些文件会被立即删除。
-            // RTF/HTML 同样落盘，避免 base64 内联 items.json 常驻内存（各可达 10MB）。
+            // RTF/HTML 大载荷落盘，避免 base64 内联 items.json 常驻内存（各可达 10MB）；
+            // 小载荷（< 4KB）直接内联到 JSON，避免为微小格式化文本创建独立 blob 文件
+            // （文件系统元数据开销 > 数据本身）。图片始终落盘（截图类体积大）。
+            let blobInlineThreshold = 4 * 1024
             func writeBlob(_ data: Data?, ext: String) -> String? {
                 guard let data else { return nil }
                 let name = UUID().uuidString + ext
@@ -107,12 +120,20 @@ final class ClipboardHistoryStore: ObservableObject {
                     return nil
                 }
             }
+            /// 小载荷内联，大载荷落盘。返回 (blobName, inlineData)，二者互斥。
+            func storePayload(_ data: Data?, ext: String) -> (blobName: String?, inline: Data?) {
+                guard let data else { return (nil, nil) }
+                if data.count < blobInlineThreshold { return (nil, data) }
+                return (writeBlob(data, ext: ext), nil)
+            }
             let imageBlobName = writeBlob(imageData, ext: ".png")
-            let rtfBlobName = writeBlob(capture.rtfData, ext: ".rtf")
-            let htmlBlobName = writeBlob(capture.htmlData, ext: ".html")
+            let (rtfBlobName, rtfInline) = storePayload(capture.rtfData, ext: ".rtf")
+            let (htmlBlobName, htmlInline) = storePayload(capture.htmlData, ext: ".html")
 
             let item = ClipboardItem(
                 text: capture.text,
+                rtfData: rtfInline,
+                htmlData: htmlInline,
                 imageBlobName: imageBlobName,
                 rtfBlobName: rtfBlobName,
                 htmlBlobName: htmlBlobName,

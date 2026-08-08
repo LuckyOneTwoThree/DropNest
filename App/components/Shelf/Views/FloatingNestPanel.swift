@@ -629,9 +629,7 @@ private class NestDragSourceView: NSView, NSDraggingSource {
 
         // 联动 autoRemoveShelfItems：移除本次拖出的成员（remove 会自动关闭空组面板）
         if shouldAutoRemove(after: operation) {
-            for member in resolveDragMembers() {
-                ShelfStateViewModel.shared.remove(member)
-            }
+            ShelfStateViewModel.shared.remove(resolveDragMembers())
         }
     }
 
@@ -728,10 +726,9 @@ enum NestDragExportService {
 
         // 联动 autoRemoveShelfItems：成功后从文件架移除（remove 会自动关闭空组面板）
         if Defaults[.autoRemoveShelfItems] && successCount > 0 {
-            for id in memberIDs {
-                if let member = ShelfStateViewModel.shared.items.first(where: { $0.id == id }) {
-                    ShelfStateViewModel.shared.remove(member)
-                }
+            let members = ShelfStateViewModel.shared.items.filter { memberIDs.contains($0.id) }
+            if !members.isEmpty {
+                ShelfStateViewModel.shared.remove(members)
             }
         }
     }
