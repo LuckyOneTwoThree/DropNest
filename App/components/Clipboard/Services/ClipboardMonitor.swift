@@ -12,11 +12,13 @@ import Defaults
 import Foundation
 
 /// Raw payload extracted from one pasteboard change, before dedup/storage.
-struct CapturedContent {
+struct CapturedContent: Sendable {
     var text: String?
     var rtfData: Data?
     var htmlData: Data?
     var imageData: Data?
+    /// 未转换的 TIFF 原始数据——转换（TIFF→PNG）是重活，推迟到后台线程执行
+    var tiffData: Data?
     var fileURLs: [URL]?
     var linkURL: URL?
     var sourceAppBundleID: String?
@@ -97,14 +99,13 @@ final class ClipboardMonitor: ObservableObject {
             content.fileURLs = urls
         }
 
-        // Image: prefer PNG; fall back to TIFF converted to PNG.
+        // Image: prefer PNG; TIFF is kept raw and converted to PNG off the
+        // main thread by the store (NSBitmapImageRep conversion is expensive).
         if Defaults[.clipboardKeepImages] {
             if let png = pb.data(forType: .png) {
                 content.imageData = png
-            } else if let tiff = pb.data(forType: .tiff),
-                      let rep = NSBitmapImageRep(data: tiff),
-                      let png = rep.representation(using: .png, properties: [:]) {
-                content.imageData = png
+            } else if let tiff = pb.data(forType: .tiff) {
+                content.tiffData = tiff
             }
         }
 
@@ -120,13 +121,13 @@ final class ClipboardMonitor: ObservableObject {
         content.htmlData = pb.data(forType: .html)
 
         // Drop empty captures (e.g. types we don't model).
-        if content.text == nil && content.imageData == nil
+        if content.text == nil && content.imageData == nil && content.tiffData == nil
             && content.fileURLs == nil && content.linkURL == nil {
             return nil
         }
 
         guard ClipboardFilter.withinSizeLimit(
-            imageData: content.imageData,
+            imageData: content.imageData ?? content.tiffData,
             rtfData: content.rtfData,
             htmlData: content.htmlData,
             text: content.text

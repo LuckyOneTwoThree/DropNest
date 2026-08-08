@@ -11,17 +11,22 @@ import Defaults
 import Combine
 
 extension SkyLightOperator {
+    /// dlopen 结果缓存为静态句柄：避免每次 undelegateWindow 都重复打开动态库，
+    /// 也避免 handle 为 nil 时 dlsym(nil, …) 误搜全局符号表。
+    /// 进程生命周期内只加载一次，不 dlclose（私有框架本就被系统映射）。
+    private static let skyLightHandle: UnsafeMutableRawPointer? = {
+        dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight", RTLD_NOW)
+    }()
+
     func undelegateWindow(_ window: NSWindow) {
         typealias F_SLSRemoveWindowsFromSpaces = @convention(c) (Int32, CFArray, CFArray) -> Int32
-        
-        let handler = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight", RTLD_NOW)
-        guard let SLSRemoveWindowsFromSpaces = unsafeBitCast(
-            dlsym(handler, "SLSRemoveWindowsFromSpaces"),
-            to: F_SLSRemoveWindowsFromSpaces?.self
-        ) else {
+
+        guard let handle = Self.skyLightHandle,
+              let symbol = dlsym(handle, "SLSRemoveWindowsFromSpaces") else {
             return
         }
-        
+        let SLSRemoveWindowsFromSpaces = unsafeBitCast(symbol, to: F_SLSRemoveWindowsFromSpaces.self)
+
         // Remove the window from the SkyLight space
         _ = SLSRemoveWindowsFromSpaces(
             connection,

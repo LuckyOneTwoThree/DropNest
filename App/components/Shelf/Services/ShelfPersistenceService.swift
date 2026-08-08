@@ -22,8 +22,15 @@ final class ShelfPersistenceService {
     private init() {
         let fm = FileManager.default
         let support = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        if support == nil {
+            print("⚠️ Shelf persistence: Application Support unavailable, falling back to temporary directory")
+        }
         let dir = (support ?? fm.temporaryDirectory).appendingPathComponent("DropNest", isDirectory: true).appendingPathComponent("Shelf", isDirectory: true)
-        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        do {
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        } catch {
+            print("❌ Shelf persistence: failed to create directory \(dir.path): \(error.localizedDescription)")
+        }
         fileURL = dir.appendingPathComponent("items.json")
         encoder.outputFormatting = [.prettyPrinted]
         decoder.dateDecodingStrategy = .iso8601
@@ -71,15 +78,27 @@ final class ShelfPersistenceService {
         }
     }
 
-    /// 防抖保存：800ms 内多次调用合并为一次后台写入（encode 在主线程，write 在后台线程）
+    /// 防抖保存：800ms 内多次调用合并为一次；encode 和 write 都在后台线程执行，
+    /// 避免拖拽批量导入时主线程被全量 JSON 编码阻塞。
     func save(_ items: [ShelfItem]) {
         saveTask?.cancel()
-        guard let data = try? encoder.encode(items) else { return }
         let url = fileURL
         saveTask = Task.detached(priority: .utility) {
-            try? await Task.sleep(for: .milliseconds(800))
-            guard !Task.isCancelled else { return }
-            try? data.write(to: url, options: .atomic)
+            do {
+                try await Task.sleep(for: .milliseconds(800))
+                try Task.checkCancellation()
+                // 每次保存用独立 encoder：后台线程不复用共享实例，规避并发风险
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted]
+                encoder.dateEncodingStrategy = .iso8601
+                let data = try encoder.encode(items)
+                try Task.checkCancellation()
+                try data.write(to: url, options: .atomic)
+            } catch is CancellationError {
+                // 防抖合并：被更新的 save 取代，正常路径
+            } catch {
+                print("❌ Failed to save shelf items: \(error.localizedDescription)")
+            }
         }
     }
 

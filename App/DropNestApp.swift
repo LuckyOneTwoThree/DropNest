@@ -49,6 +49,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var screenUnlockedObserver: Any?
     private var isScreenLocked: Bool = false
     private var windowScreenDidChangeObserver: Any?
+    /// 闭包式 NotificationCenter observer token 集中存放，退出时统一注销
+    private var notificationObservers: [Any] = []
     private var dragDetectors: [String: DragDetector] = [:] // UUID -> DragDetector
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -61,6 +63,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ShelfPersistenceService.shared.saveImmediately(ShelfStateViewModel.shared.items)
 
         NotificationCenter.default.removeObserver(self)
+        for observer in notificationObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        notificationObservers.removeAll()
         if let observer = screenLockedObserver {
             DistributedNotificationCenter.default().removeObserver(observer)
             screenLockedObserver = nil
@@ -70,6 +76,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             screenUnlockedObserver = nil
         }
         MusicManager.shared.destroy()
+        // 释放「复制」持有的安全作用域资源，避免退出前泄漏
+        ShelfItemViewModel.releaseCopiedURLs()
         // 清理摇晃检测器采样与悬浮暂存巢群
         ShakeGestureDetector.shared.reset()
         FloatingNestManager.shared.cleanup()
@@ -143,6 +151,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             windows.removeAll()
             viewModels.removeAll()
+            if let obs = windowScreenDidChangeObserver {
+                NotificationCenter.default.removeObserver(obs)
+                windowScreenDidChangeObserver = nil
+            }
         } else if let window = window {
             window.close()
             NotchSpaceManager.shared.notchSpace.windows.remove(window)
@@ -205,10 +217,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 摇晃召唤悬浮暂存框（R2）：拖拽移动采样喂入检测器；离开刘海区域/拖拽结束时重置
+        // DragDetector 已是 @MainActor，这里同步喂样本：
+        // 既省掉每次移动事件的 Task 分配，也保证采样时间戳取自事件发生时刻而非调度时刻
         detector.onDragMove = { point in
-            Task { @MainActor in
-                ShakeGestureDetector.shared.feed(point)
-            }
+            ShakeGestureDetector.shared.feed(point)
         }
 
         // v2.1：内容拖拽开始 → 创建空巢胚；结束 → 清理未使用的空巢胚
@@ -334,34 +346,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
 
-        NotificationCenter.default.addObserver(
+        notificationObservers.append(NotificationCenter.default.addObserver(
             forName: Notification.Name.selectedScreenChanged, object: nil, queue: nil
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.adjustWindowPosition(changeAlpha: true)
                 self?.setupDragDetectors()
             }
-        }
+        })
 
-        NotificationCenter.default.addObserver(
+        notificationObservers.append(NotificationCenter.default.addObserver(
             forName: Notification.Name.notchHeightChanged, object: nil, queue: nil
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.adjustWindowPosition()
                 self?.setupDragDetectors()
             }
-        }
+        })
 
-        NotificationCenter.default.addObserver(
+        notificationObservers.append(NotificationCenter.default.addObserver(
             forName: Notification.Name.automaticallySwitchDisplayChanged, object: nil, queue: nil
         ) { [weak self] _ in
             guard let self = self, let window = self.window else { return }
             Task { @MainActor in
                 window.alphaValue = self.coordinator.selectedScreenUUID == self.coordinator.preferredScreenUUID ? 1 : 0
             }
-        }
+        })
 
-        NotificationCenter.default.addObserver(
+        notificationObservers.append(NotificationCenter.default.addObserver(
             forName: Notification.Name.showOnAllDisplaysChanged, object: nil, queue: nil
         ) { [weak self] _ in
             Task { @MainActor in
@@ -370,15 +382,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.adjustWindowPosition(changeAlpha: true)
                 self.setupDragDetectors()
             }
-        }
+        })
 
-        NotificationCenter.default.addObserver(
+        notificationObservers.append(NotificationCenter.default.addObserver(
             forName: Notification.Name.expandedDragDetectionChanged, object: nil, queue: nil
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.setupDragDetectors()
             }
-        }
+        })
 
         // Use closure-based observers for DistributedNotificationCenter and keep tokens for removal
         screenLockedObserver = DistributedNotificationCenter.default().addObserver(

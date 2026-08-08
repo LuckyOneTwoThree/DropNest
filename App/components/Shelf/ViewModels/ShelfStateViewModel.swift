@@ -199,16 +199,22 @@ final class ShelfStateViewModel: ObservableObject {
 
 
     /// 载入拖拽内容。
-    /// - Parameter intoGroup: 拖入既有巢时传入该巢 groupID，本批条目继承之；
-    ///   拖入空巢胚时由 manager 先创建新 groupID 再传入；nil = 刘海 Shelf 直接拖入（保留批量成组开关）。
-    func load(_ providers: [NSItemProvider], intoGroup groupID: UUID? = nil) {
-        guard !providers.isEmpty else { return }
+    /// - Parameters:
+    ///   - intoGroup: 拖入既有巢时传入该巢 groupID，本批条目继承之；
+    ///     拖入空巢胚时由 manager 先创建新 groupID 再传入；nil = 刘海 Shelf 直接拖入（保留批量成组开关）。
+    ///   - completion: 载入真正完成（或失败为空）后的回调，替代硬编码 sleep 等待
+    func load(_ providers: [NSItemProvider], intoGroup groupID: UUID? = nil, completion: (() -> Void)? = nil) {
+        guard !providers.isEmpty else {
+            completion?()
+            return
+        }
         isLoading = true
         Task { [weak self] in
             var dropped = await ShelfDropService.items(from: providers)
             await MainActor.run {
                 guard !dropped.isEmpty else {
                     self?.isLoading = false
+                    completion?()
                     return
                 }
                 if let groupID {
@@ -223,6 +229,7 @@ final class ShelfStateViewModel: ObservableObject {
                 NotchTabPreference.lastActivity = .shelfDeposit
                 self?.add(dropped)
                 self?.isLoading = false
+                completion?()
             }
         }
     }

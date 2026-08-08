@@ -25,72 +25,128 @@ final class ClipboardHistoryStore: ObservableObject {
     private let directory: URL
     private let blobsDirectory: URL
     private let fileURL: URL
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
 
     private var saveTask: Task<Void, Never>?
+
+    /// 标记历史是否已从磁盘加载完成。加载完成前 items 为空，
+    /// 启动瞬间复制的新条目会在 finishInitialLoad 中与磁盘历史合并。
+    private var didLoadFromDisk = false
 
     private init() {
         let fm = FileManager.default
         let support = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        if support == nil {
+            print("⚠️ Clipboard history: Application Support unavailable, falling back to temporary directory")
+        }
         directory = (support ?? fm.temporaryDirectory)
             .appendingPathComponent("DropNest", isDirectory: true)
             .appendingPathComponent("ClipboardHistory", isDirectory: true)
         blobsDirectory = directory.appendingPathComponent("blobs", isDirectory: true)
-        try? fm.createDirectory(at: blobsDirectory, withIntermediateDirectories: true)
+        do {
+            try fm.createDirectory(at: blobsDirectory, withIntermediateDirectories: true)
+        } catch {
+            print("❌ Clipboard history: failed to create blobs directory: \(error.localizedDescription)")
+        }
         fileURL = directory.appendingPathComponent("items.json")
-        encoder.outputFormatting = [.prettyPrinted]
-        decoder.dateDecodingStrategy = .iso8601
-        encoder.dateEncodingStrategy = .iso8601
 
-        items = load()
+        // 历史 load + prune 移到后台线程，避免大 JSON 反序列化阻塞主线程启动。
+        // load(from:) 是纯函数（只读 url + 内部新建 decoder），不捕获任何可变/非 Sendable 状态，
+        // 可安全在 detached task 执行；解码完成后回主线程赋值 items 并裁剪。
+        let url = fileURL
+        Task.detached(priority: .utility) { [weak self] in
+            let loaded = Self.load(from: url)
+            await self?.finishInitialLoad(loaded)
+        }
+    }
+
+    /// 主线程收尾：合并磁盘历史与加载期间的新插入，再裁剪。
+    private func finishInitialLoad(_ loaded: [ClipboardItem]) {
+        guard !didLoadFromDisk else { return }
+        didLoadFromDisk = true
+        // 加载期间若有新条目（prepend 到 items），保留在前；历史 append 在后。
+        items = items + loaded
         pruneExpired()
         prune()
-        if !items.isEmpty { save() } // persist any capacity-trimmed state
+        if !items.isEmpty { scheduleSave() } // persist any capacity-trimmed state
     }
 
     // MARK: - Insert / dedup
 
+    /// 入口（@MainActor）：重活（TIFF→PNG、SHA256、blob 写盘）全部在后台线程完成，
+    /// 主线程只承担去重判定与 items 数组变更。
     func insert(_ capture: CapturedContent) {
         NotchTabPreference.lastActivity = .copy
+        let blobsDir = blobsDirectory
+        Task.detached(priority: .utility) { [weak self] in
+            // TIFF → PNG 转换（后台；截图类内容的最高开销环节）
+            var imageData = capture.imageData
+            if imageData == nil, let tiff = capture.tiffData,
+               let rep = NSBitmapImageRep(data: tiff),
+               let png = rep.representation(using: .png, properties: [:]) {
+                imageData = png
+            }
 
-        let hash = ClipboardItem.makeHash(
-            text: capture.text,
-            imageData: capture.imageData,
-            fileURLs: capture.fileURLs,
-            linkURL: capture.linkURL
-        )
+            // SHA256 哈希（后台；大图可达 10MB）
+            let hash = ClipboardItem.makeHash(
+                text: capture.text,
+                imageData: imageData,
+                fileURLs: capture.fileURLs,
+                linkURL: capture.linkURL
+            )
+
+            // blob 写盘（后台）。若主线程判重命中，这些文件会被立即删除。
+            // RTF/HTML 同样落盘，避免 base64 内联 items.json 常驻内存（各可达 10MB）。
+            func writeBlob(_ data: Data?, ext: String) -> String? {
+                guard let data else { return nil }
+                let name = UUID().uuidString + ext
+                do {
+                    try data.write(to: blobsDir.appendingPathComponent(name), options: .atomic)
+                    return name
+                } catch {
+                    print("❌ Clipboard history: failed to write \(ext) blob: \(error.localizedDescription)")
+                    return nil
+                }
+            }
+            let imageBlobName = writeBlob(imageData, ext: ".png")
+            let rtfBlobName = writeBlob(capture.rtfData, ext: ".rtf")
+            let htmlBlobName = writeBlob(capture.htmlData, ext: ".html")
+
+            let item = ClipboardItem(
+                text: capture.text,
+                imageBlobName: imageBlobName,
+                rtfBlobName: rtfBlobName,
+                htmlBlobName: htmlBlobName,
+                fileURLs: capture.fileURLs,
+                linkURL: capture.linkURL,
+                sourceAppBundleID: capture.sourceAppBundleID,
+                contentHash: hash
+            )
+            await self?.finishInsert(item)
+        }
+    }
+
+    /// 主线程收尾：去重 / 插入 / 修剪 / 调度保存
+    private func finishInsert(_ item: ClipboardItem) {
+        let hash = item.contentHash
 
         // Dedup: identical content already recorded → bump to top.
         if let index = items.firstIndex(where: { $0.contentHash == hash }) {
-            var existing = items.remove(at: index)
-            existing.lastCopiedAt = Date()
-            existing.copyCount += 1
-            items.insert(existing, at: 0)
+            // 新写的 blob 无引用（复用既有条目的 blob），立即清理
+            let existing = items[index]
+            for name in [item.imageBlobName, item.rtfBlobName, item.htmlBlobName] {
+                if let name, name != existing.imageBlobName, name != existing.rtfBlobName, name != existing.htmlBlobName {
+                    try? FileManager.default.removeItem(at: blobsDirectory.appendingPathComponent(name))
+                }
+            }
+            var bumped = items.remove(at: index)
+            bumped.lastCopiedAt = Date()
+            bumped.copyCount += 1
+            items.insert(bumped, at: 0)
             currentContentHash = hash
             scheduleSave()
             return
         }
 
-        var imageBlobName: String?
-        if let imageData = capture.imageData {
-            let name = UUID().uuidString + ".png"
-            let blobURL = blobsDirectory.appendingPathComponent(name)
-            if (try? imageData.write(to: blobURL, options: .atomic)) != nil {
-                imageBlobName = name
-            }
-        }
-
-        let item = ClipboardItem(
-            text: capture.text,
-            rtfData: capture.rtfData,
-            htmlData: capture.htmlData,
-            imageBlobName: imageBlobName,
-            fileURLs: capture.fileURLs,
-            linkURL: capture.linkURL,
-            sourceAppBundleID: capture.sourceAppBundleID,
-            contentHash: hash
-        )
         items.insert(item, at: 0)
         currentContentHash = hash
         prune()
@@ -139,9 +195,28 @@ final class ClipboardHistoryStore: ObservableObject {
 
     func togglePin(_ item: ClipboardItem) {
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        let willPin = !items[index].isPinned
         items[index].isPinned.toggle()
+        if willPin {
+            enforcePinnedCap()
+        }
         scheduleSave()
     }
+
+    /// 置顶数量上限——超出时自动取消最旧的置顶，防止 pinned 条目永不淘汰
+    /// 导致内存/磁盘无界增长。只取消置顶标记，不删除条目本身。
+    private func enforcePinnedCap() {
+        let pinnedIndices = items.indices.filter { items[$0].isPinned }
+        guard pinnedIndices.count > Self.maxPinnedItems else { return }
+        // items 按时间倒序，最旧的置顶在末尾
+        for idx in pinnedIndices.dropFirst(Self.maxPinnedItems) {
+            items[idx].isPinned = false
+        }
+        print("📋 Clipboard history: pinned cap (\(Self.maxPinnedItems)) reached, oldest pin(s) released")
+    }
+
+    /// 置顶条目数上限
+    private static let maxPinnedItems = 100
 
     func remove(_ item: ClipboardItem) {
         items.removeAll { $0.id == item.id }
@@ -150,6 +225,9 @@ final class ClipboardHistoryStore: ObservableObject {
     }
 
     func clearAll() {
+        // 标记不再接受磁盘加载：避免用户在启动加载完成前清空，
+        // 随后 finishInitialLoad 又把磁盘历史 append 回来导致清空失效。
+        didLoadFromDisk = true
         let removed = items
         items = []
         currentContentHash = nil
@@ -174,8 +252,9 @@ final class ClipboardHistoryStore: ObservableObject {
         if let link = item.linkURL {
             pb.setString(link.absoluteString, forType: NSPasteboard.PasteboardType("public.url"))
         }
-        if let rtf = item.rtfData { pb.setData(rtf, forType: .rtf) }
-        if let html = item.htmlData { pb.setData(html, forType: .html) }
+        // RTF/HTML：新格式从 blob 读，旧格式用内联数据（向后兼容）
+        if let rtf = loadBlobData(name: item.rtfBlobName) ?? item.rtfData { pb.setData(rtf, forType: .rtf) }
+        if let html = loadBlobData(name: item.htmlBlobName) ?? item.htmlData { pb.setData(html, forType: .html) }
         if let text = item.text { pb.setString(text, forType: .string) }
 
         currentContentHash = item.contentHash
@@ -189,33 +268,52 @@ final class ClipboardHistoryStore: ObservableObject {
     }
 
     private func removeBlob(_ item: ClipboardItem) {
-        guard let name = item.imageBlobName else { return }
-        try? FileManager.default.removeItem(at: blobsDirectory.appendingPathComponent(name))
+        for name in [item.imageBlobName, item.rtfBlobName, item.htmlBlobName] {
+            guard let name else { continue }
+            try? FileManager.default.removeItem(at: blobsDirectory.appendingPathComponent(name))
+        }
+    }
+
+    /// 读取 blob 文件内容（RTF/HTML 回贴路径用）
+    private func loadBlobData(name: String?) -> Data? {
+        guard let name else { return nil }
+        return try? Data(contentsOf: blobsDirectory.appendingPathComponent(name))
     }
 
     // MARK: - Persistence
 
     /// Debounced write — rapid copies coalesce into a single disk hit.
+    /// encode + write 都在后台线程执行，主线程只捕获 items 快照。
     private func scheduleSave() {
         saveTask?.cancel()
-        saveTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
-            guard !Task.isCancelled, let self else { return }
-            self.save()
+        let snapshot = items
+        let url = fileURL
+        saveTask = Task.detached(priority: .utility) {
+            do {
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+                try Task.checkCancellation()
+                // 每次保存用独立 encoder：后台线程不复用共享实例，规避并发风险
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted]
+                encoder.dateEncodingStrategy = .iso8601
+                let data = try encoder.encode(snapshot)
+                try Task.checkCancellation()
+                try data.write(to: url, options: .atomic)
+            } catch is CancellationError {
+                // 防抖合并：被更新的 save 取代，正常路径
+            } catch {
+                print("❌ Failed to save clipboard history: \(error.localizedDescription)")
+            }
         }
     }
 
-    private func save() {
-        do {
-            let data = try encoder.encode(items)
-            try data.write(to: fileURL, options: .atomic)
-        } catch {
-            print("Failed to save clipboard history: \(error.localizedDescription)")
-        }
-    }
+    /// 从磁盘加载历史（纯函数，可安全在后台线程执行）。
+    /// 容错路径：单条损坏时逐条 salvage，避免整份历史因一条坏数据丢失。
+    private nonisolated static func load(from url: URL) -> [ClipboardItem] {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
 
-    private func load() -> [ClipboardItem] {
-        guard let data = try? Data(contentsOf: fileURL) else { return [] }
+        guard let data = try? Data(contentsOf: url) else { return [] }
 
         if let decoded = try? decoder.decode([ClipboardItem].self, from: data) {
             return decoded

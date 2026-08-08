@@ -6,6 +6,21 @@
 //
 
 import SwiftUI
+import ImageIO
+
+/// ImageIO 下采样：只解码到目标像素尺寸，避免把整张 PNG（可达 10MB）
+/// 全量解码成位图常驻内存。28pt 行高 ×2（Retina）≈ 56px，取 64 留余量。
+private nonisolated func downsampledThumbnail(at url: URL, maxPixelSize: Int = 64) -> NSImage? {
+    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+    let options: [CFString: Any] = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceShouldCacheImmediately: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
+    ]
+    guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+    return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+}
 
 struct ClipboardItemView: View {
     let item: ClipboardItem
@@ -92,7 +107,7 @@ struct ClipboardItemView: View {
         switch kind {
         case .image:
             if let url = ClipboardHistoryStore.shared.blobURL(for: item) {
-                let image = await Task.detached(priority: .userInitiated) { NSImage(contentsOf: url) }.value
+                let image = await Task.detached(priority: .userInitiated) { downsampledThumbnail(at: url) }.value
                 if !Task.isCancelled { cachedThumbnail = image }
             }
         case .file:

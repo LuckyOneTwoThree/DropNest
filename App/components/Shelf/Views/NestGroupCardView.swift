@@ -215,7 +215,7 @@ private struct GroupCardDragHandler: NSViewRepresentable {
     }
 
     final class GroupCardDragView: NSView, NSDraggingSource {
-        var groupID: UUID!
+        var groupID: UUID?
         var members: [ShelfItem] = []
         var dragPreviewImage: NSImage?
 
@@ -252,7 +252,7 @@ private struct GroupCardDragHandler: NSViewRepresentable {
         }
 
         override func mouseUp(with event: NSEvent) {
-            if !didDrag && event.clickCount == 1 {
+            if !didDrag, event.clickCount == 1, let groupID {
                 // v2.1：点击组卡片 → 以悬浮巢形式展示在桌面（调 FloatingNestManager.toggle）
                 FloatingNestManager.shared.toggle(groupID: groupID)
             }
@@ -280,6 +280,7 @@ private struct GroupCardDragHandler: NSViewRepresentable {
         // MARK: 右键菜单
 
         private func presentContextMenu(with event: NSEvent) {
+            guard let groupID else { return }
             let menu = NSMenu()
             let target = GroupMenuTarget(groupID: groupID)
             let isExpanded = ShelfStateViewModel.shared.expandedGroupIDs.contains(groupID)

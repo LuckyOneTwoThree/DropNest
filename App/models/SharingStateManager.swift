@@ -78,6 +78,7 @@ final class SharingLifecycleDelegate: NSObject, NSSharingServiceDelegate, NSShar
 	private var serviceInProgress = false
 	private var finished = false
 	private var timeoutTask: Task<Void, Never>?
+	private var pickerTimeoutTask: Task<Void, Never>?
 
 	init(id: UUID, onEnd: @escaping () -> Void, onBegin: @escaping () -> Void, onFinish: @escaping () -> Void) {
 		self.id = id
@@ -85,15 +86,31 @@ final class SharingLifecycleDelegate: NSObject, NSSharingServiceDelegate, NSShar
 		self.onBegin = onBegin
 		self.onFinish = onFinish
 	}
-	
+
 	deinit {
 		timeoutTask?.cancel()
+		pickerTimeoutTask?.cancel()
 	}
 
 	func markPickerBegan() {
 		guard !pickerActive else { return }
 		pickerActive = true
 		onBegin()
+		startPickerTimeoutFallback()
+	}
+
+	/// Picker 兜底：若 picker 弹出后未回调 didChoose（如点击外部 dismiss），
+	/// 会话与 delegate 会永久泄漏、preventNotchClose 卡死。60 秒无响应则强制收尾。
+	private func startPickerTimeoutFallback() {
+		pickerTimeoutTask?.cancel()
+		pickerTimeoutTask = Task { @MainActor [weak self] in
+			try? await Task.sleep(for: .seconds(60))
+			guard let self = self, !Task.isCancelled else { return }
+			if !self.finished && !self.serviceInProgress {
+				print("⚠️ Sharing picker did not call back within 60s, force-finishing session")
+				self.finishIfNeeded()
+			}
+		}
 	}
 
 	func markServiceBegan() {
@@ -118,6 +135,7 @@ final class SharingLifecycleDelegate: NSObject, NSSharingServiceDelegate, NSShar
 		guard !finished else { return }
 		finished = true
 		timeoutTask?.cancel()
+		pickerTimeoutTask?.cancel()
 		onFinish()
 		onEnd()
 	}
@@ -125,6 +143,8 @@ final class SharingLifecycleDelegate: NSObject, NSSharingServiceDelegate, NSShar
 	// MARK: - NSSharingServicePickerDelegate
 
 	func sharingServicePicker(_ sharingServicePicker: NSSharingServicePicker, didChoose service: NSSharingService?) {
+		// 用户已作出选择（含取消），picker 兜底使命结束
+		pickerTimeoutTask?.cancel()
 		if service == nil {
 			if pickerActive && !serviceInProgress {
 				finishIfNeeded()

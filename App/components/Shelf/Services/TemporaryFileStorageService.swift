@@ -20,7 +20,8 @@ class TemporaryFileStorageService {
     
     // MARK: - Public Interface
     
-    /// Creates a temporary file and tracks it for manual cleanup
+    /// Creates a temporary file. 清理责任在调用方：
+    /// Shelf 条目移除时经 `ShelfItem.cleanupStoredData()` → `removeTemporaryFileIfNeeded(at:)`。
     func createTempFile(for type: TempFileType) async -> URL? {
         return await withCheckedContinuation { continuation in
             let result = createTempFile(for: type)
@@ -225,20 +226,26 @@ class TemporaryFileStorageService {
             try await runZip(args, currentDirectory: workingDir)
         } catch {
             print("❌ Failed to run zip: \(error)")
+            // 失败路径也要清掉拷贝进 workingDir 的副本，否则临时目录累积垃圾
+            cleanupWorkingDir(workingDir, keeping: nil)
             return nil
         }
         // Remove the copied (uncompressed) items so the temp folder contains only the archive
+        cleanupWorkingDir(workingDir, keeping: archiveURL)
+        return archiveURL
+    }
+
+    /// 删除 workingDir 中的拷贝副本；keeping 非 nil 时保留该文件（zip 产物）
+    private func cleanupWorkingDir(_ workingDir: URL, keeping keepURL: URL?) {
         do {
             let contents = try FileManager.default.contentsOfDirectory(at: workingDir, includingPropertiesForKeys: nil)
             for file in contents {
-                if file.standardizedFileURL != archiveURL.standardizedFileURL {
-                    try FileManager.default.removeItem(at: file)
-                }
+                if let keepURL, file.standardizedFileURL == keepURL.standardizedFileURL { continue }
+                try FileManager.default.removeItem(at: file)
             }
         } catch {
             print("⚠️ Failed to cleanup working directory after zip: \(error)")
         }
-        return archiveURL
     }
     
     // MARK: - Content Creation Helpers

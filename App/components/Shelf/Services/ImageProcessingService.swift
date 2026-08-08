@@ -77,16 +77,15 @@ final class ImageProcessingService {
         let mask = try result.generateScaledMaskForImage(forInstances: result.allInstances, from: handler)
         
         let output = try await applyMask(mask, to: cgImage)
-        
-        let processedImage = NSImage(cgImage: output, size: inputImage.size)
-        
+
         // Create temporary file
         let originalName = url.deletingPathExtension().lastPathComponent
         let newName = "\(originalName)_no_bg.png"
-        
-        guard let pngData = processedImage.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: pngData),
-              let finalData = bitmap.representation(using: .png, properties: [:]) else {
+
+        // 直接从 CGImage 构建位图，避免 tiffRepresentation 的全尺寸 TIFF 往返
+        // （省一份完整 RGBA 缓冲 + TIFF 编解码峰值）
+        let bitmap = NSBitmapImageRep(cgImage: output)
+        guard let finalData = bitmap.representation(using: .png, properties: [:]) else {
             throw ImageProcessingError.saveFailed
         }
         
@@ -243,15 +242,16 @@ final class ImageProcessingService {
         }
         
         let pdfDocument = PDFDocument()
-        
+
         for (index, url) in imageURLs.enumerated() {
-            guard let image = NSImage(contentsOf: url) else {
-                continue
-            }
-            
-            let pdfPage = PDFPage(image: image)
-            if let page = pdfPage {
-                pdfDocument.insert(page, at: index)
+            // autoreleasepool：每张图的 NSImage 包装与中间位图在当次循环结束即释放，
+            // 避免多张全尺寸图同时驻留导致的瞬时内存峰值
+            autoreleasepool {
+                guard let image = NSImage(contentsOf: url) else { return }
+
+                if let pdfPage = PDFPage(image: image) {
+                    pdfDocument.insert(pdfPage, at: index)
+                }
             }
         }
         

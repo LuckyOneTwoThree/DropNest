@@ -262,7 +262,7 @@ private struct DraggableClickHandler<Content: View>: NSViewRepresentable {
     }
     
     final class DraggableClickView: NSView, NSDraggingSource {
-        var item: ShelfItem!
+        var item: ShelfItem?
         weak var viewModel: ShelfItemViewModel?
         var dragPreviewImage: NSImage?
         var onRightClick: ((NSEvent, NSView) -> Void)?
@@ -302,6 +302,7 @@ private struct DraggableClickHandler<Content: View>: NSViewRepresentable {
         }
         
         private func startDragSession(with event: NSEvent) {
+            guard let item else { return }
             // Prepare dragging items
             let selectedItems = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
             let itemsToDrag: [ShelfItem]

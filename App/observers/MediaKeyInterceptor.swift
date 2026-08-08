@@ -202,9 +202,28 @@ final class MediaKeyInterceptor {
         }
     }
 
+    /// 系统「调节音量时播放反馈」开关。
+    /// 原实现每次按键都 `persistentDomain(forName:)` 拷贝整个 NSGlobalDomain 字典（数百键），
+    /// 改为 CFPreferences 单键读取 + 1 秒 TTL 缓存：连按音量键时几乎零开销，
+    /// 用户在系统设置里改开关后最多 1 秒生效。
+    private static var beepFeedbackCache: (value: Bool, fetchedAt: TimeInterval) = (false, -1)
+
+    private func isBeepFeedbackEnabled() -> Bool {
+        let now = ProcessInfo.processInfo.systemUptime
+        if now - Self.beepFeedbackCache.fetchedAt < 1.0 {
+            return Self.beepFeedbackCache.value
+        }
+        let raw = CFPreferencesCopyAppValue(
+            "com.apple.sound.beep.feedback" as CFString,
+            kCFPreferencesAnyApplication
+        ) as? NSNumber
+        let enabled = raw?.intValue == 1
+        Self.beepFeedbackCache = (enabled, now)
+        return enabled
+    }
+
     private func playFeedbackSound() {
-        guard let feedback = UserDefaults.standard.persistentDomain(forName: "NSGlobalDomain")?["com.apple.sound.beep.feedback"] as? Int,
-              feedback == 1 else { return }
+        guard isBeepFeedbackEnabled() else { return }
 
         prepareAudioPlayerIfNeeded()
         guard let player = audioPlayer else { return }

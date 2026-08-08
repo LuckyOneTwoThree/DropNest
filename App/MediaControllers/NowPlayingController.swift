@@ -28,6 +28,10 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
     private var pipeHandler: JSONLinesPipeHandler?
     private var streamTask: Task<Void, Never>?
 
+    /// 媒体流每秒可产生数条 JSON 行，逐条新建 formatter 属于高频小对象分配（且 ISO8601DateFormatter 初始化并不便宜）。
+    /// 二者均为只读用法，复用同一实例即可。
+    private static let iso8601Formatter = ISO8601DateFormatter()
+
     // MARK: - Initialization
     init?() {
         Task { await setupNowPlayingObserver() }
@@ -55,6 +59,8 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
             let scriptURL = Bundle.main.url(forResource: "mediaremote-adapter", withExtension: "pl"),
             let frameworkPath = Bundle.main.privateFrameworksPath?.appending("/MediaRemoteAdapter.framework")
         else {
+            // Release 版 assertionFailure 会被编译掉，媒体功能静默失效且无任何线索；改为始终可见的日志
+            print("❌ [NowPlaying] 找不到 mediaremote-adapter.pl 或 MediaRemoteAdapter.framework，媒体信息将不可用")
             assertionFailure("Could not find mediaremote-adapter.pl script or framework path")
             return
         }
@@ -74,6 +80,9 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
                 await self?.processJSONStream()
             }
         } catch {
+            print("❌ [NowPlaying] 启动 mediaremote-adapter.pl 失败：\(error.localizedDescription)")
+            self.process = nil
+            self.pipeHandler = nil
             assertionFailure("Failed to launch mediaremote-adapter.pl: \(error)")
         }
     }
@@ -121,7 +130,7 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
         }
 
         if let dateString = payload.timestamp,
-           let date = ISO8601DateFormatter().date(from: dateString) {
+           let date = Self.iso8601Formatter.date(from: dateString) {
             newPlaybackState.lastUpdated = date
         } else if !diff {
             newPlaybackState.lastUpdated = Date()
@@ -164,6 +173,39 @@ actor JSONLinesPipeHandler {
     private let pipe: Pipe
     private let fileHandle: FileHandle
     private var buffer = ""
+    /// 复用解码器：媒体流按行高频解码，逐行新建 JSONDecoder 是纯粹的分配浪费
+    private let decoder = JSONDecoder()
+
+    /// 挂起的读取 continuation。readabilityHandler 在系统队列触发（非 actor 隔离），
+    /// 用锁保证恰好 resume 一次；close()/任务取消时兜底 resume，避免 Task 永久泄漏。
+    private final class PendingReadBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<Data, any Error>?
+
+        func install(_ c: CheckedContinuation<Data, any Error>) {
+            lock.lock()
+            continuation = c
+            lock.unlock()
+        }
+
+        func resume(returning data: Data) {
+            lock.lock()
+            let c = continuation
+            continuation = nil
+            lock.unlock()
+            c?.resume(returning: data)
+        }
+
+        func resume(throwing error: any Error) {
+            lock.lock()
+            let c = continuation
+            continuation = nil
+            lock.unlock()
+            c?.resume(throwing: error)
+        }
+    }
+
+    private let pendingRead = PendingReadBox()
 
     init() {
         self.pipe = Pipe()
@@ -209,7 +251,7 @@ actor JSONLinesPipeHandler {
             return
         }
         do {
-            let decodedObject = try JSONDecoder().decode(T.self, from: data)
+            let decodedObject = try decoder.decode(T.self, from: data)
             await onLine(decodedObject)
         } catch {
             // Ignore lines that can't be decoded
@@ -217,19 +259,29 @@ actor JSONLinesPipeHandler {
     }
 
     private func readData() async throws -> Data {
-        return try await withCheckedThrowingContinuation { continuation in
-
-            fileHandle.readabilityHandler = { handle in
-                let data = handle.availableData
-                handle.readabilityHandler = nil
-                continuation.resume(returning: data)
+        let box = pendingRead
+        let handle = fileHandle
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                box.install(continuation)
+                handle.readabilityHandler = { h in
+                    let data = h.availableData
+                    h.readabilityHandler = nil
+                    box.resume(returning: data)
+                }
             }
+        } onCancel: {
+            // 任务取消时兜底 resume，避免 continuation 永久悬挂导致 Task 泄漏
+            handle.readabilityHandler = nil
+            box.resume(throwing: CancellationError())
         }
     }
 
     func close() async {
         do {
             fileHandle.readabilityHandler = nil
+            // 若 readData 正挂起，以空数据放行（processLines 会按 EOF 正常退出循环）
+            pendingRead.resume(returning: Data())
             try fileHandle.close()
             try pipe.fileHandleForWriting.close()
         } catch {

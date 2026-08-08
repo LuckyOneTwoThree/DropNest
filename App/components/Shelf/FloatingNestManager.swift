@@ -106,18 +106,11 @@ final class FloatingNestManager {
 
         // 载入暂存的 providers 到新 groupID
         if let providers = pendingDropProviders {
-            ShelfStateViewModel.shared.load(providers, intoGroup: realGroupID)
             pendingDropProviders = nil
-            // load 是异步的，延迟调整窗口大小以适应实际条目数（平滑动画）
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .milliseconds(350))
-                guard self != nil else { return }
-                let tvm = ShelfStateViewModel.shared
-                // load 仍在进行则再等一拍，避免误判
-                if tvm.isLoading {
-                    try? await Task.sleep(for: .milliseconds(300))
-                }
-                let members = tvm.items(inGroup: realGroupID)
+            // 载入完成后回调再调整窗口尺寸/判定回滚（替代硬编码 sleep 竞态）
+            ShelfStateViewModel.shared.load(providers, intoGroup: realGroupID) { [weak self, weak panel] in
+                guard let panel else { return }
+                let members = ShelfStateViewModel.shared.items(inGroup: realGroupID)
                 if members.isEmpty {
                     // load 失败/无有效内容 → 回滚：关闭空巢并清理位置记忆
                     panel.hide()

@@ -8,6 +8,10 @@
 import Cocoa
 import UniformTypeIdentifiers
 
+/// 全局鼠标监视器只会在主线程 runloop 上派发，因此整体标注为 @MainActor：
+/// 回调方可以直接同步调用主线程隔离的对象（如 ShakeGestureDetector），
+/// 避免拖拽期间（60~120Hz）为每个事件额外分配一个 Task 并产生时序抖动。
+@MainActor
 final class DragDetector {
 
     // MARK: - Callbacks
@@ -26,9 +30,11 @@ final class DragDetector {
     var onContentDragEnd: VoidCallback?
 
 
-    private var mouseDownMonitor: Any?
-    private var mouseDraggedMonitor: Any?
-    private var mouseUpMonitor: Any?
+    // 监视器令牌需要在 deinit（nonisolated 上下文）中释放，故标为 nonisolated(unsafe)；
+    // 实际读写均发生在主线程（startMonitoring / stopMonitoring / deinit），不存在竞争
+    private nonisolated(unsafe) var mouseDownMonitor: Any?
+    private nonisolated(unsafe) var mouseDraggedMonitor: Any?
+    private nonisolated(unsafe) var mouseUpMonitor: Any?
 
     private var pasteboardChangeCount: Int = -1
     private var isDragging: Bool = false
@@ -115,6 +121,14 @@ final class DragDetector {
     }
 
     func stopMonitoring() {
+        removeMonitors()
+        isDragging = false
+        isContentDragging = false
+        hasEnteredNotchRegion = false
+    }
+
+    /// 仅摘除事件监视器，不触碰主线程隔离状态，便于 deinit 复用
+    private nonisolated func removeMonitors() {
         [mouseDownMonitor, mouseDraggedMonitor, mouseUpMonitor].forEach { monitor in
             if let monitor = monitor {
                 NSEvent.removeMonitor(monitor)
@@ -123,12 +137,9 @@ final class DragDetector {
         mouseDownMonitor = nil
         mouseDraggedMonitor = nil
         mouseUpMonitor = nil
-        isDragging = false
-        isContentDragging = false
-        hasEnteredNotchRegion = false
     }
 
     deinit {
-        stopMonitoring()
+        removeMonitors()
     }
 }

@@ -80,8 +80,8 @@ class NotchViewModel: NSObject, ObservableObject {
     @Published var closedNotchSize: CGSize = getClosedNotchSize()
 
     /// Live clipboard history row count, kept in sync by ClipboardHistoryStore.
-    /// Non-isolated storage so the view model can size the notch without
-    /// crossing actor boundaries.
+    /// 写入方（ClipboardHistoryStore.didSet）与读取方（notchHeight 计算）均在
+    /// @MainActor 上；静态成员随类隔离，无跨 actor 访问。
     static var clipboardRowCount: Int = 0
 
     deinit {    

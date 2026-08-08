@@ -28,6 +28,15 @@ final class ShelfItemViewModel: ObservableObject {
     private var sharingAccessingURLs: [URL] = []
     private static var copiedURLs: [URL] = []
 
+    /// 释放「复制」操作持有的安全作用域访问（退出/清理时调用）。
+    /// 否则 startAccessing 的资源要拖到下一次复制才 stop，App 退出前一直泄漏。
+    static func releaseCopiedURLs() {
+        for url in copiedURLs {
+            url.stopAccessingSecurityScopedResource()
+        }
+        copiedURLs.removeAll()
+    }
+
     private let selection = ShelfSelectionModel.shared
 
     init(item: ShelfItem) {
@@ -533,12 +542,9 @@ final class ShelfItemViewModel: ObservableObject {
             case "复制":
                 let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
                 let pb = NSPasteboard.general
-                
+
                 // Stop accessing previously copied URLs
-                for url in ShelfItemViewModel.copiedURLs {
-                    url.stopAccessingSecurityScopedResource()
-                }
-                ShelfItemViewModel.copiedURLs.removeAll()
+                ShelfItemViewModel.releaseCopiedURLs()
                 
                 pb.clearContents()
                 Task {

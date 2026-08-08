@@ -48,7 +48,57 @@ enum ShelfItemKind: Codable, Equatable, Sendable {
 
 }
 
+// MARK: - 解析结果缓存
+/// 缓存书签解析 / 展示名 / 图标的计算结果，避免 displayName、icon、identityKey
+/// 这些计算属性在主线程反复做书签解析与磁盘 I/O（尤其 add() 去重时对全部
+/// 已存条目 map 一遍 identityKey）。
+///
+/// key 用书签数据本身：书签刷新（stale refresh 写回新 bookmark）后 key 变化，
+/// 自动失效重新解析。只缓存成功案例，失败路径每次重试。
 @MainActor
+final class ShelfItemResolutionCache {
+    static let shared = ShelfItemResolutionCache()
+
+    /// bookmark data → (url, refreshedBookmark)
+    private var contexts: [Data: (url: URL, bookmark: Data)] = [:]
+    /// bookmark data → 展示名
+    private var displayNames: [Data: String] = [:]
+    /// 文件路径 → 图标
+    private var icons: [String: NSImage] = [:]
+
+    /// 简单容量保护：超限时整体清空（代价仅是重新解析一轮）
+    private let maxEntries = 1000
+
+    func cachedContext(for bookmarkData: Data) -> (url: URL, bookmark: Data)? {
+        contexts[bookmarkData]
+    }
+
+    func storeContext(_ context: (url: URL, bookmark: Data), for bookmarkData: Data) {
+        if contexts.count > maxEntries { contexts.removeAll(keepingCapacity: true) }
+        contexts[bookmarkData] = context
+    }
+
+    func cachedDisplayName(for bookmarkData: Data) -> String? {
+        displayNames[bookmarkData]
+    }
+
+    func storeDisplayName(_ name: String, for bookmarkData: Data) {
+        if displayNames.count > maxEntries { displayNames.removeAll(keepingCapacity: true) }
+        displayNames[bookmarkData] = name
+    }
+
+    func cachedIcon(forPath path: String) -> NSImage? {
+        icons[path]
+    }
+
+    func storeIcon(_ icon: NSImage, forPath path: String) {
+        if icons.count > maxEntries { icons.removeAll(keepingCapacity: true) }
+        icons[path] = icon
+    }
+}
+
+/// 值类型本体非隔离（Codable/Equatable 可在后台线程使用，如批量 JSON 编码）；
+/// 需要书签解析/图标/缓存的计算属性单独标注 @MainActor。
 struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
     var kind: ShelfItemKind
@@ -61,52 +111,19 @@ struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
         self.isTemporary = isTemporary
         self.groupID = groupID
     }
-    
+
+    @MainActor
     var displayName: String {
         switch kind {
         case .file(let bookmarkData):
-            let bookmark = Bookmark(data: bookmarkData)
-            guard let resolvedURL = bookmark.resolveURL() else { return "" }
-            
-            // Check for stored data files (text blocks, weblocs, etc.) to provide friendly names
-            if resolvedURL.pathExtension.lowercased() == "json" && resolvedURL.path.contains("TextBlocks") {
-                do {
-                    let data = try Data(contentsOf: resolvedURL)
-                    let decoder = JSONDecoder()
-                    decoder.dateDecodingStrategy = .iso8601
-                    struct TextBlockData: Codable {
-                        let content: String
-                        let title: String?
-                        var displayTitle: String {
-                            if let title = title, !title.isEmpty {
-                                return title
-                            }
-                            let firstLine = content.components(separatedBy: .newlines).first ?? content
-                            if firstLine.count > 50 {
-                                return String(firstLine.prefix(47)) + "..."
-                            }
-                            return firstLine
-                        }
-                    }
-                    if let textData = try? decoder.decode(TextBlockData.self, from: data) {
-                        return textData.displayTitle
-                    }
-                } catch {
-                    // Fall through to default naming
-                }
-            } else if resolvedURL.pathExtension.lowercased() == "webloc" && resolvedURL.path.contains("WebLocs") {
-                do {
-                    let data = try Data(contentsOf: resolvedURL)
-                    if let plist = try PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
-                       let urlString = plist["URL"] as? String {
-                        let title = plist["Title"] as? String
-                        return title ?? urlString
-                    }
-                } catch {
-                    // Fall through to default naming
-                }
+            if let cached = ShelfItemResolutionCache.shared.cachedDisplayName(for: bookmarkData) {
+                return cached
             }
-            return (try? resolvedURL.resourceValues(forKeys: [.localizedNameKey]).localizedName) ?? resolvedURL.lastPathComponent
+            let name = computeDisplayName(bookmarkData: bookmarkData)
+            if !name.isEmpty {
+                ShelfItemResolutionCache.shared.storeDisplayName(name, for: bookmarkData)
+            }
+            return name
         case .text(let string):
             return string.trimmingCharacters(in: .whitespacesAndNewlines)
         case .link(let url):
@@ -120,29 +137,84 @@ struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
             }
         }
     }
+
+    @MainActor
+    private func computeDisplayName(bookmarkData: Data) -> String {
+        guard let resolvedURL = resolvedContext(for: bookmarkData)?.url else { return "" }
+
+        // Check for stored data files (text blocks, weblocs, etc.) to provide friendly names
+        if resolvedURL.pathExtension.lowercased() == "json" && resolvedURL.path.contains("TextBlocks") {
+            do {
+                let data = try Data(contentsOf: resolvedURL)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                struct TextBlockData: Codable {
+                    let content: String
+                    let title: String?
+                    var displayTitle: String {
+                        if let title = title, !title.isEmpty {
+                            return title
+                        }
+                        let firstLine = content.components(separatedBy: .newlines).first ?? content
+                        if firstLine.count > 50 {
+                            return String(firstLine.prefix(47)) + "..."
+                        }
+                        return firstLine
+                    }
+                }
+                if let textData = try? decoder.decode(TextBlockData.self, from: data) {
+                    return textData.displayTitle
+                }
+            } catch {
+                // Fall through to default naming
+            }
+        } else if resolvedURL.pathExtension.lowercased() == "webloc" && resolvedURL.path.contains("WebLocs") {
+            do {
+                let data = try Data(contentsOf: resolvedURL)
+                if let plist = try PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+                   let urlString = plist["URL"] as? String {
+                    let title = plist["Title"] as? String
+                    return title ?? urlString
+                }
+            } catch {
+                // Fall through to default naming
+            }
+        }
+        return (try? resolvedURL.resourceValues(forKeys: [.localizedNameKey]).localizedName) ?? resolvedURL.lastPathComponent
+    }
     
+    @MainActor
     var fileURL: URL? {
         guard case .file = kind else { return nil }
         return ShelfStateViewModel.shared.resolveFileURL(for: self)
     }
-    
+
+    @MainActor
     var URL: URL? {
         if case let .file(bookmark) = kind { return resolvedContext(for: bookmark)?.url }
         else if case let .link(url) = kind { return url }
         else { return nil }
     }
-    
+
+    @MainActor
     var icon: NSImage {
         guard case .file = kind else {
             return Self.thumbnailSymbolImage(systemName: kind.iconSymbolName) ?? NSImage()
         }
         if let resolvedURL = ShelfStateViewModel.shared.resolveFileURL(for: self) {
-            return NSWorkspace.shared.icon(forFile: resolvedURL.path)
+            let path = resolvedURL.path
+            if let cached = ShelfItemResolutionCache.shared.cachedIcon(forPath: path) {
+                return cached
+            }
+            let icon = NSWorkspace.shared.icon(forFile: path)
+            ShelfItemResolutionCache.shared.storeIcon(icon, forPath: path)
+            return icon
         }
         return NSImage()
     }
     
 
+    @MainActor
     func cleanupStoredData() {
         guard case let .file(bookmark) = kind,
               let context = resolvedContext(for: bookmark) else { return }
@@ -158,6 +230,7 @@ struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
 }
 
 private extension ShelfItem {
+   @MainActor
    static func thumbnailSymbolImage(
         systemName: String,
     size: CGSize = CGSize(width: 64, height: 80), 
@@ -191,6 +264,7 @@ private extension ShelfItem {
 
 // MARK: - Identity key for deduplication
 extension ShelfItem {
+    @MainActor
     var identityKey: String {
         switch kind {
         case .file(let bookmark):
@@ -221,11 +295,16 @@ private extension ShelfItemKind {
 }
 
 private extension ShelfItem {
+    @MainActor
     func resolvedContext(for bookmarkData: Data) -> (url: URL, bookmark: Data)? {
-        let bookmark = Bookmark(data: bookmarkData)
-        if let url = bookmark.resolveURL() {
-            return (url, bookmark.refreshedData ?? bookmarkData)
+        let cache = ShelfItemResolutionCache.shared
+        if let cached = cache.cachedContext(for: bookmarkData) {
+            return cached
         }
-        return nil
+        let bookmark = Bookmark(data: bookmarkData)
+        guard let url = bookmark.resolveURL() else { return nil }
+        let context = (url, bookmark.refreshedData ?? bookmarkData)
+        cache.storeContext(context, for: bookmarkData)
+        return context
     }
 }

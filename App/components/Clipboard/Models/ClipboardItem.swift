@@ -30,7 +30,8 @@ enum ClipboardItemKind: String, Codable, Sendable {
 /// representations (plain text + RTF + HTML, image, file URLs) — all are
 /// stored and written back together on re-copy so pasting behaves identically
 /// to the original copy.
-@MainActor
+///
+/// 纯值类型，非隔离：哈希计算与 JSON 编码在后台线程执行（见 ClipboardHistoryStore）。
 struct ClipboardItem: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
     var firstCopiedAt: Date
@@ -39,10 +40,16 @@ struct ClipboardItem: Identifiable, Codable, Equatable, Sendable {
 
     // Multi-type payload
     var text: String?
+    /// 旧格式内联 RTF 数据（向后兼容解码）；新条目一律落盘为 blob，此字段为 nil
     var rtfData: Data?
+    /// 旧格式内联 HTML 数据（向后兼容解码）；新条目一律落盘为 blob，此字段为 nil
     var htmlData: Data?
     /// File name inside ClipboardHistory/blobs/ (PNG). Binary stays out of JSON.
     var imageBlobName: String?
+    /// RTF 大载荷落盘 blob 文件名，避免 base64 内联 JSON 常驻内存
+    var rtfBlobName: String?
+    /// HTML 大载荷落盘 blob 文件名
+    var htmlBlobName: String?
     /// Finder file references — URL only, content is never copied.
     var fileURLs: [URL]?
     var linkURL: URL?
@@ -61,6 +68,8 @@ struct ClipboardItem: Identifiable, Codable, Equatable, Sendable {
         rtfData: Data? = nil,
         htmlData: Data? = nil,
         imageBlobName: String? = nil,
+        rtfBlobName: String? = nil,
+        htmlBlobName: String? = nil,
         fileURLs: [URL]? = nil,
         linkURL: URL? = nil,
         sourceAppBundleID: String? = nil,
@@ -75,6 +84,8 @@ struct ClipboardItem: Identifiable, Codable, Equatable, Sendable {
         self.rtfData = rtfData
         self.htmlData = htmlData
         self.imageBlobName = imageBlobName
+        self.rtfBlobName = rtfBlobName
+        self.htmlBlobName = htmlBlobName
         self.fileURLs = fileURLs
         self.linkURL = linkURL
         self.sourceAppBundleID = sourceAppBundleID

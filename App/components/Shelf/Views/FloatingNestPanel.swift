@@ -684,8 +684,8 @@ private struct NestCellDragHandler: NSViewRepresentable {
 }
 
 private final class NestCellDragView: NestDragSourceView {
-    var item: ShelfItem!
-    override func resolveDragMembers() -> [ShelfItem] { [item] }
+    var item: ShelfItem?
+    override func resolveDragMembers() -> [ShelfItem] { item.map { [$0] } ?? [] }
     // 单个拖出不需要 willBegin 的 beginDrag（整体拖出才需要），但基类统一调用无副作用
 }
 

@@ -14,9 +14,10 @@ import SwiftUI
 @MainActor
 struct ContentView: View {
     @EnvironmentObject var vm: NotchViewModel
-    @ObservedObject var coordinator = NotchViewCoordinator.shared
-    @ObservedObject var musicManager = MusicManager.shared
-    @ObservedObject var batteryModel = BatteryStatusViewModel.shared
+    // 折叠态 HUD/电池/音乐的高频状态（sneakPeek、expandingView、isPlaying 等）已下沉到
+    // ClosedNotchContent / ChinRect 子视图各自订阅，避免按键时整棵 NotchLayout body 重估。
+    // firstLaunch 仅首次启动变化一次，用 @AppStorage 直读，无需订阅 coordinator。
+    @AppStorage("firstLaunch") var firstLaunch: Bool = true
     @State private var hoverTask: Task<Void, Never>?
     @State private var isHovering: Bool = false
     @State private var anyDropDebounceTask: Task<Void, Never>?
@@ -43,23 +44,6 @@ struct ContentView: View {
                 ? cornerRadiusInsets.opened.bottom
                 : cornerRadiusInsets.closed.bottom
         )
-    }
-
-    private var computedChinWidth: CGFloat {
-        var chinWidth: CGFloat = vm.closedNotchSize.width
-
-        // 电池横向通知优先级最高，扩展到展开态宽度
-        if coordinator.expandingView.type == .battery && coordinator.expandingView.show
-            && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
-        {
-            chinWidth = 640
-        } else if vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle)
-            && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed
-        {
-            chinWidth += (2 * max(0, vm.effectiveClosedNotchHeight - 12) + 20)
-        }
-
-        return chinWidth
     }
 
     var body: some View {
@@ -161,9 +145,9 @@ struct ContentView: View {
                         .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
                     }
                 if vm.chinHeight > 0 {
-                    Rectangle()
-                        .fill(Color.black.opacity(0.01))
-                        .frame(width: computedChinWidth, height: vm.chinHeight)
+                    // chin 宽度依赖 expandingView/music 状态，下沉到独立子视图自订阅，
+                    // 避免这些状态变化触发整棵 ContentView body 重估。
+                    ChinRect()
                 }
             }
         }
@@ -219,86 +203,17 @@ struct ContentView: View {
     func NotchLayout() -> some View {
         VStack(alignment: .leading) {
             VStack(alignment: .leading) {
-                // 电池横向通知（电源/充电/低功耗变化时短闪）
-                if coordinator.expandingView.type == .battery && coordinator.expandingView.show
-                    && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
-                {
-                    HStack(spacing: 0) {
-                        HStack {
-                            Text(batteryModel.statusText)
-                                .font(.subheadline)
-                                .foregroundStyle(.white)
-                        }
-
-                        Rectangle()
-                            .fill(.black)
-                            .frame(width: vm.closedNotchSize.width + 10)
-
-                        HStack {
-                            BoringBatteryView(
-                                batteryWidth: 30,
-                                isCharging: batteryModel.isCharging,
-                                isInLowPowerMode: batteryModel.isInLowPowerMode,
-                                isPluggedIn: batteryModel.isPluggedIn,
-                                levelBattery: batteryModel.levelBattery,
-                                isForNotification: true
-                            )
-                        }
-                        .frame(width: 76, alignment: .trailing)
-                    }
-                    .frame(height: vm.effectiveClosedNotchHeight, alignment: .center)
-                } else if coordinator.sneakPeek.show && Defaults[.inlineHUD]
-                    && coordinator.sneakPeek.type != .music
-                    && coordinator.sneakPeek.type != .battery
-                    && vm.notchState == .closed
-                {
-                    // 折叠态内联 HUD（音量/亮度/背光）
-                    InlineHUD(
-                        type: $coordinator.sneakPeek.type,
-                        value: $coordinator.sneakPeek.value,
-                        icon: $coordinator.sneakPeek.icon,
-                        hoverAnimation: $isHovering,
-                        gestureProgress: $gestureProgress
-                    )
-                    .transition(.opacity)
-                } else if vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle)
-                    && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed
-                {
-                    MusicLiveActivity()
-                        .frame(alignment: .center)
-                } else if vm.notchState == .open {
+                if vm.notchState == .open {
                     NotchHeader()
                         .frame(height: max(24, vm.effectiveClosedNotchHeight))
                         .opacity(gestureProgress != 0 ? 1.0 - min(abs(gestureProgress) * 0.1, 0.3) : 1.0)
                 } else {
-                    Rectangle().fill(.clear).frame(width: vm.closedNotchSize.width - 20, height: vm.effectiveClosedNotchHeight)
-                }
-
-                // 折叠态非内联 HUD（默认样式，在刘海下方显示进度条）
-                if coordinator.sneakPeek.show
-                    && coordinator.sneakPeek.type != .music
-                    && coordinator.sneakPeek.type != .battery
-                    && !Defaults[.inlineHUD]
-                    && vm.notchState == .closed
-                {
-                    SystemEventIndicatorModifier(
-                        eventType: $coordinator.sneakPeek.type,
-                        value: $coordinator.sneakPeek.value,
-                        icon: $coordinator.sneakPeek.icon,
-                        sendEventBack: { newVal in
-                            switch coordinator.sneakPeek.type {
-                            case .volume:
-                                VolumeManager.shared.setAbsolute(Float32(newVal))
-                            case .brightness:
-                                BrightnessManager.shared.setAbsolute(value: Float32(newVal))
-                            case .backlight:
-                                KeyboardBacklightManager.shared.setAbsolute(value: Float32(newVal))
-                            default:
-                                break
-                            }
-                        }
+                    // 折叠态内容下沉到独立子视图：sneakPeek/expandingView/music/battery 变化
+                    // 只重绘 ClosedNotchContent，不再触发整棵 NotchLayout body 重估。
+                    ClosedNotchContent(
+                        isHovering: $isHovering,
+                        gestureProgress: $gestureProgress
                     )
-                    .padding(.bottom, 10)
                 }
             }
             .zIndex(2)
@@ -331,43 +246,6 @@ struct ContentView: View {
             ShelfStateViewModel.shared.load(providers)
             return true
         }
-    }
-
-    @ViewBuilder
-    func MusicLiveActivity() -> some View {
-        HStack {
-            Image(nsImage: musicManager.albumArt)
-                .resizable()
-                .clipped()
-                .clipShape(
-                    RoundedRectangle(
-                        cornerRadius: MusicPlayerImageSizes.cornerRadiusInset.closed)
-                )
-                .frame(
-                    width: max(0, vm.effectiveClosedNotchHeight - 12),
-                    height: max(0, vm.effectiveClosedNotchHeight - 12)
-                )
-
-            Rectangle()
-                .fill(.black)
-                .frame(width: vm.closedNotchSize.width + -cornerRadiusInsets.closed.top)
-
-            Rectangle()
-                .fill(
-                    Defaults[.coloredSpectrogram]
-                        ? Color(nsColor: musicManager.avgColor).gradient
-                        : Color.gray.gradient
-                )
-                .frame(width: 50, alignment: .center)
-                .mask {
-                    AudioSpectrumView(isPlaying: $musicManager.isPlaying)
-                        .frame(width: 16, height: 12)
-                }
-        }
-        .frame(
-            height: vm.effectiveClosedNotchHeight,
-            alignment: .center
-        )
     }
 
     @ViewBuilder
@@ -422,7 +300,7 @@ struct ContentView: View {
     // MARK: - Hover Management
 
     private func handleHover(_ hovering: Bool) {
-        if coordinator.firstLaunch { return }
+        if firstLaunch { return }
         hoverTask?.cancel()
 
         if hovering {
@@ -434,8 +312,10 @@ struct ContentView: View {
                 haptics.toggle()
             }
 
+            // 直接读 coordinator 单例当前值：handleHover 是事件处理（非 body 渲染），
+            // 只需此刻的 sneakPeek 状态判断是否放行 hover 展开，无需订阅触发重绘。
             guard vm.notchState == .closed,
-                  !coordinator.sneakPeek.show,
+                  !NotchViewCoordinator.shared.sneakPeek.show,
                   Defaults[.openNotchOnHover] else { return }
 
             hoverTask = Task {
@@ -544,6 +424,171 @@ struct FullScreenDropDelegate: DropDelegate {
         return true
     }
 
+}
+
+// MARK: - Closed-notch content（折叠态 HUD/电池/音乐，独立订阅高频状态）
+
+/// 折叠态刘海内容：电池横向通知 / 内联 HUD / 音乐 Live Activity / 占位符，以及非内联 HUD。
+/// 单独订阅 coordinator/musicManager/batteryModel，使 sneakPeek（音量/亮度键）等高频变化
+/// 只重绘本视图，不再触发 ContentView.body → NotchLayout() 整棵重估。
+@MainActor
+private struct ClosedNotchContent: View {
+    @EnvironmentObject var vm: NotchViewModel
+    @ObservedObject var coordinator = NotchViewCoordinator.shared
+    @ObservedObject var musicManager = MusicManager.shared
+    @ObservedObject var batteryModel = BatteryStatusViewModel.shared
+    @Binding var isHovering: Bool
+    @Binding var gestureProgress: CGFloat
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            // 电池横向通知（电源/充电/低功耗变化时短闪）
+            if coordinator.expandingView.type == .battery && coordinator.expandingView.show
+                && Defaults[.showPowerStatusNotifications]
+            {
+                HStack(spacing: 0) {
+                    HStack {
+                        Text(batteryModel.statusText)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                    }
+
+                    Rectangle()
+                        .fill(.black)
+                        .frame(width: vm.closedNotchSize.width + 10)
+
+                    HStack {
+                        BoringBatteryView(
+                            batteryWidth: 30,
+                            isCharging: batteryModel.isCharging,
+                            isInLowPowerMode: batteryModel.isInLowPowerMode,
+                            isPluggedIn: batteryModel.isPluggedIn,
+                            levelBattery: batteryModel.levelBattery,
+                            isForNotification: true
+                        )
+                    }
+                    .frame(width: 76, alignment: .trailing)
+                }
+                .frame(height: vm.effectiveClosedNotchHeight, alignment: .center)
+            } else if coordinator.sneakPeek.show && Defaults[.inlineHUD]
+                && coordinator.sneakPeek.type != .music
+                && coordinator.sneakPeek.type != .battery
+            {
+                // 折叠态内联 HUD（音量/亮度/背光）
+                InlineHUD(
+                    type: $coordinator.sneakPeek.type,
+                    value: $coordinator.sneakPeek.value,
+                    icon: $coordinator.sneakPeek.icon,
+                    hoverAnimation: $isHovering,
+                    gestureProgress: $gestureProgress
+                )
+                .transition(.opacity)
+            } else if (musicManager.isPlaying || !musicManager.isPlayerIdle)
+                && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed
+            {
+                musicLiveActivity
+                    .frame(alignment: .center)
+            } else {
+                Rectangle().fill(.clear).frame(width: vm.closedNotchSize.width - 20, height: vm.effectiveClosedNotchHeight)
+            }
+
+            // 折叠态非内联 HUD（默认样式，在刘海下方显示进度条）
+            if coordinator.sneakPeek.show
+                && coordinator.sneakPeek.type != .music
+                && coordinator.sneakPeek.type != .battery
+                && !Defaults[.inlineHUD]
+            {
+                SystemEventIndicatorModifier(
+                    eventType: $coordinator.sneakPeek.type,
+                    value: $coordinator.sneakPeek.value,
+                    icon: $coordinator.sneakPeek.icon,
+                    sendEventBack: { newVal in
+                        switch coordinator.sneakPeek.type {
+                        case .volume:
+                            VolumeManager.shared.setAbsolute(Float32(newVal))
+                        case .brightness:
+                            BrightnessManager.shared.setAbsolute(value: Float32(newVal))
+                        case .backlight:
+                            KeyboardBacklightManager.shared.setAbsolute(value: Float32(newVal))
+                        default:
+                            break
+                        }
+                    }
+                )
+                .padding(.bottom, 10)
+            }
+        }
+    }
+
+    /// 音乐 Live Activity：专辑封面 + 间隙 + 频谱条。仅折叠态显示。
+    @ViewBuilder
+    private var musicLiveActivity: some View {
+        HStack {
+            Image(nsImage: musicManager.albumArt)
+                .resizable()
+                .clipped()
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius: MusicPlayerImageSizes.cornerRadiusInset.closed)
+                )
+                .frame(
+                    width: max(0, vm.effectiveClosedNotchHeight - 12),
+                    height: max(0, vm.effectiveClosedNotchHeight - 12)
+                )
+
+            Rectangle()
+                .fill(.black)
+                .frame(width: vm.closedNotchSize.width + -cornerRadiusInsets.closed.top)
+
+            Rectangle()
+                .fill(
+                    Defaults[.coloredSpectrogram]
+                        ? Color(nsColor: musicManager.avgColor).gradient
+                        : Color.gray.gradient
+                )
+                .frame(width: 50, alignment: .center)
+                .mask {
+                    AudioSpectrumView(isPlaying: $musicManager.isPlaying)
+                        .frame(width: 16, height: 12)
+                }
+        }
+        .frame(
+            height: vm.effectiveClosedNotchHeight,
+            alignment: .center
+        )
+    }
+}
+
+/// 折叠态 chin 矩形：填充刘海与菜单栏之间的高度差。宽度随电池通知/音乐展开。
+/// 单独订阅 coordinator/musicManager，避免这些状态变化触发 ContentView body 重估。
+@MainActor
+private struct ChinRect: View {
+    @EnvironmentObject var vm: NotchViewModel
+    @ObservedObject var coordinator = NotchViewCoordinator.shared
+    @ObservedObject var musicManager = MusicManager.shared
+
+    private var chinWidth: CGFloat {
+        var width = vm.closedNotchSize.width
+
+        // 电池横向通知优先级最高，扩展到展开态宽度
+        if coordinator.expandingView.type == .battery && coordinator.expandingView.show
+            && Defaults[.showPowerStatusNotifications]
+        {
+            width = 640
+        } else if (musicManager.isPlaying || !musicManager.isPlayerIdle)
+            && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed
+        {
+            width += (2 * max(0, vm.effectiveClosedNotchHeight - 12) + 20)
+        }
+
+        return width
+    }
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.black.opacity(0.01))
+            .frame(width: chinWidth, height: vm.chinHeight)
+    }
 }
 
 #Preview {
