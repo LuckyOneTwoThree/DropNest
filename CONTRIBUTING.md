@@ -95,18 +95,22 @@ xcodebuild \
 
 ```
 App/
-├── DropNestApp.swift          # 应用入口
+├── DropNestApp.swift          # 应用入口 + AppDelegate
 ├── ContentView.swift          # 刘海整体布局
+├── NotchViewCoordinator.swift # 刘海视图协调器
 ├── components/
 │   ├── Notch/                 # 刘海窗口、形状、头部、频谱
-│   ├── Shelf/                 # 文件暂存模块（Models/Services/ViewModels/Views）
-│   ├── Clipboard/             # 剪贴板历史模块
-│   └── Settings/              # 设置界面
-├── managers/                  # MusicManager 等
+│   ├── Shelf/                 # 文件架 + 悬浮暂存巢群（Models/Services/ViewModels/Views + FloatingNestManager）
+│   ├── Clipboard/             # 剪贴板历史（Models/Services/ViewModels/Views）
+│   ├── HUD/                   # 系统 HUD（InlineHUD/OpenNotchHUD/SystemEventIndicator）
+│   ├── Battery/               # 电池指示视图
+│   └── Settings/              # 8 分页设置界面
+├── managers/                  # Volume/Brightness/Battery/Music/NotchSpace
 ├── MediaControllers/          # NowPlayingController（mediaremote-adapter 封装）
-├── observers/                 # DragDetector（刘海拖拽检测）
-├── sizing/                    # 刘海尺寸计算
-├── models/ enums/ extensions/ helpers/ utils/
+├── observers/                 # DragDetector / MediaKeyInterceptor / ShakeGestureDetector
+├── XPCHelperClient/           # XPC 客户端（async/await 封装）
+├── models/                    # Constants、NotchViewModel、BatteryStatusViewModel
+├── sizing/ extensions/ helpers/ enums/
 ```
 
 > 详细的目录说明见 [README.md](README.md#目录结构)。

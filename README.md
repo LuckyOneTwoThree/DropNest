@@ -13,7 +13,8 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License"></a>
   <img src="https://img.shields.io/badge/platform-macOS%2014%2B-black" alt="Platform">
   <img src="https://img.shields.io/badge/Swift-5.0-FA7343" alt="Swift">
-  <img src="https://img.shields.io/badge/version-3.0-green" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.0-green" alt="Version">
+  <a href="https://github.com/LuckyOneTwoThree/DropNest/actions"><img src="https://github.com/LuckyOneTwoThree/DropNest/actions/workflows/build.yml/badge.svg" alt="Build"></a>
 </p>
 
 > ⚠️ **许可证**：本项目派生自 [boring.notch](https://github.com/TheBoredTeam/boring.notch)（GPL-3.0）。依据 GPL「衍生作品」条款，DropNest 同样以 **GPL-3.0** 发布，必须保留原许可证与版权信息。详见 [`LICENSE`](LICENSE) 与 [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES)。
@@ -41,7 +42,9 @@
 
 - **拖入即收**：文件/文件夹/文本/链接拖到刘海区域自动展开收纳。
 - **安全书签持久化**：使用 security-scoped bookmark，重启后文件引用不丢失。
+- **书签自动重解析**：缓存带 30s TTL，文件改名/移动后自动重新解析，不会再显示过期路径。
 - **集合管理**：多个文件可编组为集合，集合卡片显示数量角标，支持就地展开、解散、删除。
+- **批量操作流畅**：批量删除、清空集合的文件 IO 全部后台执行，UI 不卡顿；批量移除只触发一次界面刷新。
 - **复制 vs 移动**：默认拖出为复制（保留原文件）；可在设置中关闭以切换为移动语义。
 - **丰富右键菜单**：打开 / 快速查看 / 访达中显示 / 分享 / 复制 / 重命名 / 移除。
 - **图片处理**：移除背景（抠图）/ 转换图片格式 / 创建 PDF。
@@ -56,6 +59,8 @@
 - **可选自动粘贴**：回贴后自动注入 `⌘V` 到当前应用（需辅助功能权限）。
 - **隐私红线**：自动识别密码管理器的一次性内容、文件承诺类型，可配置忽略应用列表。
 - **容量与时效**：可设置最大条目数、保留天数、是否保存图片/文件、最大条目体积。
+- **过期自动清理**：后台每 10 分钟扫描过期条目，长期运行不积累垃圾。
+- **小体积优化**：RTF/HTML 小于 4KB 时内联存储，避免为格式化文本产生大量碎片 blob 文件。
 
 ### 🎵 媒体条（Now Playing）
 
@@ -73,6 +78,9 @@
 - **多种显示样式**：折叠态内联 HUD（刘海两侧）/ 展开态可拖动进度条 / 刘海下方进度条。
 - **Option 键增强**：按住 Option + 媒体键可自定义行为（打开设置 / 显示 HUD / 无操作）。
 - **CGEvent Tap 拦截**：精准拦截媒体键事件，抑制系统原生 bezel，需辅助功能权限（运行时授予）。
+- **Tap 自恢复**：系统在回调超时时会静默禁用 tap，DropNest 检测后立即重新启用，并每 30s 健康检查一次——长时间运行不会出现「音量键 HUD 突然失效需重启」。
+- **音频设备切换跟随**：切换默认输出设备（耳机/音箱/蓝牙）后自动重新注册监听，音量调节与 HUD 始终跟随当前设备。
+- **事件保序**：异步处理路径已串行化，连续快速按键不会乱序执行。
 
 ### 🔋 电池指示
 
@@ -112,6 +120,18 @@
 
 XPC 通信使用 `withCheckedContinuation` 包装为 async/await，带错误处理避免永久挂起。
 
+### 性能与稳定性
+
+DropNest 经过两轮深度代码审查与优化，长期运行稳定：
+
+- **主线程零文件 IO**：所有 FileManager 操作（删除集合/清空文件架/移除条目/书签解析/剪贴板图片入库）均在后台线程执行，拖拽与滚动不卡顿。
+- **书签解析缓存**：`ShelfItemResolutionCache` 带 30s TTL 与 NSLock 保护，避免 `displayName`/`icon`/`identityKey` 在主线程反复做书签解析与磁盘 I/O。
+- **缩略图 NSCache**：100 条 / 256MB 上限，按文件 mtime 生成 key，文件修改后自动重建；`clearCache(for:)` 按路径前缀精确匹配。
+- **媒体键健壮性**：CGEvent tap 超时自动恢复 + 30s 健康检查 + 事件串行化，避免「长时间运行后音量键 HUD 失效」。
+- **音频设备切换**：VolumeManager 监听默认输出设备变更，自动注销旧监听、在新设备上重新注册。
+- **剪贴板后台化**：图片 TIFF→PNG 转换、SHA256、blob 写盘全部后台执行；过期条目每 10 分钟自动清理。
+- **严格并发**：`SWIFT_STRICT_CONCURRENCY = targeted`，7 个 UI 状态类统一 `@MainActor` 隔离，模型层去 MainActor 化以支持后台批量编解码。
+
 ### 窗口体系
 
 - 基于 [SkyLightWindow](https://github.com/Lakr233/SkyLightWindow) 创建贴合刘海形状的无边框窗口，跨 Space 显示。
@@ -149,7 +169,7 @@ XPC 通信使用 `withCheckedContinuation` 包装为 async/await，带错误处�
 
 ### 方式一：下载安装包
 
-若仓库 Release 中提供了 `.dmg`，挂载后把 `DropNest.app` 拖入 `应用程序` 即可。
+前往 [Releases](https://github.com/LuckyOneTwoThree/DropNest/releases) 下载最新 `.dmg`，挂载后把 `DropNest.app` 拖入 `应用程序` 即可。每次打 `v*` tag 会自动触发 GitHub Actions 构建并发布。
 
 ### 方式二：从源码构建
 
@@ -303,6 +323,12 @@ A：确认设置 → 剪贴板中已开启热键。`⌃⌥V` 可能与其他应�
 
 **Q：Shelf 里的文件重启后打不开了？**
 A：极少数情况下安全书签可能失效（文件被移动/删除）。重新拖入该文件即可。
+
+**Q：长时间运行后音量键 HUD 不出现？**
+A：DropNest 已实现 CGEvent tap 超时自恢复与每 30s 健康检查，正常情况下不会出现此问题。如仍出现，请确认辅助功能权限未被撤销，并检查是否有其他应用抢占媒体键拦截。
+
+**Q：切换耳机/音箱后音量调节异常？**
+A：DropNest 会自动跟随默认输出设备重新注册监听。如仍异常，重启 App 即可恢复。
 
 ---
 
