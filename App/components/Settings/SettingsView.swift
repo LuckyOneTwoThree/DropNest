@@ -361,6 +361,10 @@ struct Media: View {
 
 struct Shelf: View {
     @Default(.expandedDragDetection) var expandedDragDetection: Bool
+    @Default(.floatingNestEnabled) var floatingNestEnabled: Bool
+    @Default(.nestShowOnDragStart) var nestShowOnDragStart: Bool
+    @Default(.shakeSensitivity) var shakeSensitivity: Double
+    @Default(.nestMaxGridColumns) var nestMaxGridColumns: Int
 
     var body: some View {
         Form {
@@ -381,13 +385,49 @@ struct Shelf: View {
                     )
                 }
                 Defaults.Toggle(key: .copyOnDrag) {
-                    Text("拖拽时复制文件")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("拖拽时复制文件")
+                        Text("开启（默认）：拖出暂存文件到目标位置时复制副本，原文件保留在原路径。\n关闭：拖出时移动原文件，原路径将被改变（等同于剪切）。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 Defaults.Toggle(key: .autoRemoveShelfItems) {
                     Text("拖出后从文件架移除")
                 }
             } header: {
                 Text("通用")
+            }
+
+            Section {
+                Defaults.Toggle(key: .floatingNestEnabled) {
+                    Text("启用悬浮暂存巢")
+                }
+                Defaults.Toggle(key: .nestShowOnDragStart) {
+                    Text("拖拽开始自动显示巢群")
+                }
+                .disabled(!floatingNestEnabled)
+                Slider(value: $shakeSensitivity, in: 0...1, step: 0.1) {
+                    Text("摇晃灵敏度 - \(shakeSensitivity, specifier: "%.1f")")
+                }
+                .disabled(!floatingNestEnabled)
+                Stepper(value: $nestMaxGridColumns, in: 2...4) {
+                    HStack {
+                        Text("网格列数上限")
+                        Spacer()
+                        Text("\(nestMaxGridColumns) × \(nestMaxGridColumns)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .disabled(!floatingNestEnabled)
+                Defaults.Toggle(key: .nestAutoGroupOnBatchDrop) {
+                    Text("批量拖入自动成组")
+                }
+            } header: {
+                Text("悬浮暂存巢与集合")
+            } footer: {
+                Text("每个悬浮巢 = 一个集合。拖拽开始时自动在指针附近显示空巢胚，拖入即孵化为正式巢；关闭「拖拽开始自动显示」后仅摇晃指针召唤。网格列数上限控制单个巢的最大宽度（超出纵向滚动）。")
             }
         }
         .quitToolbar()
@@ -536,6 +576,9 @@ struct ClipboardSettings: View {
 
 struct HUDSettings: View {
     @Default(.hudReplacement) var hudReplacement
+    @Default(.volumeHUDEnabled) var volumeHUDEnabled
+    @Default(.brightnessHUDEnabled) var brightnessHUDEnabled
+    @Default(.keyboardBacklightHUDEnabled) var keyboardBacklightHUDEnabled
     @Default(.inlineHUD) var inlineHUD
     @Default(.enableGradient) var enableGradient
     @Default(.systemEventIndicatorShadow) var systemEventIndicatorShadow
@@ -586,6 +629,25 @@ struct HUDSettings: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                Defaults.Toggle(key: .volumeHUDEnabled) {
+                    Text("音量 HUD")
+                }
+                Defaults.Toggle(key: .brightnessHUDEnabled) {
+                    Text("亮度 HUD")
+                }
+                Defaults.Toggle(key: .keyboardBacklightHUDEnabled) {
+                    Text("键盘背光 HUD")
+                }
+            } header: {
+                Text("各能力开关")
+            } footer: {
+                Text("单独控制各类按键的拦截与 HUD 显示。关闭的类别将放行原生事件。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .disabled(!hudReplacement)
 
             Section {
                 Picker("Option 键行为", selection: $optionKeyAction) {

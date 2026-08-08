@@ -53,10 +53,13 @@ struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
     var kind: ShelfItemKind
     var isTemporary: Bool
-    init(id: UUID = UUID(), kind: ShelfItemKind, isTemporary: Bool = false) {
+    /// 所属集合；nil = 独立条目。可选字段，旧 items.json 无需迁移
+    var groupID: UUID?
+    init(id: UUID = UUID(), kind: ShelfItemKind, isTemporary: Bool = false, groupID: UUID? = nil) {
         self.id = id
         self.kind = kind
         self.isTemporary = isTemporary
+        self.groupID = groupID
     }
     
     var displayName: String {

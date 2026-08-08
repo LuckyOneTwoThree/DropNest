@@ -96,6 +96,27 @@ struct ShelfView: View {
         }
     }
 
+    /// 一键展开/收起全部桌面巢群。仅当存在集合组时显示。
+    @ViewBuilder
+    private var nestGroupButton: some View {
+        let hasGroups = tvm.entries.contains { if case .group = $0 { return true }; return false }
+        if hasGroups {
+            Button {
+                if FloatingNestManager.shared.hasVisiblePanels {
+                    FloatingNestManager.shared.dockAll()
+                } else {
+                    FloatingNestManager.shared.showAll()
+                }
+            } label: {
+                Image(systemName: "square.stack.3d.up")
+                    .font(.system(size: 11))
+                    .foregroundStyle(FloatingNestManager.shared.hasVisiblePanels ? Color.accentColor : Color.gray)
+            }
+            .buttonStyle(.plain)
+            .help(FloatingNestManager.shared.hasVisiblePanels ? "收起全部桌面巢" : "展开全部桌面巢")
+        }
+    }
+
     var panel: some View {
         RoundedRectangle(cornerRadius: 16)
             .stroke(
@@ -115,6 +136,18 @@ struct ShelfView: View {
             .onTapGesture { selection.clear() }
     }
 
+    /// 渲染单元 + 集合序号命名（「集合 N」按出现顺序编号）
+    private var namedEntries: [(entry: ShelfEntry, name: String)] {
+        var ordinal = 0
+        return tvm.entries.map { entry in
+            if case .group = entry {
+                ordinal += 1
+                return (entry, "集合 \(ordinal)")
+            }
+            return (entry, "")
+        }
+    }
+
     var content: some View {
         Group {
             if tvm.isEmpty {
@@ -131,21 +164,29 @@ struct ShelfView: View {
                         .fontWeight(.medium)
                 }
             } else {
-                VStack(spacing: 6) {
+                VStack(spacing: 14) {
                     HStack {
                         Text("\(tvm.items.count) 项")
                             .font(.system(.caption, design: .rounded))
                             .foregroundStyle(.gray)
                         Spacer()
+                        nestGroupButton
                         clearButton
                     }
                     .padding(.horizontal, 4)
+                    .padding(.top, -4) // 顶栏向虚线边框靠近
 
                     ScrollView(.horizontal) {
                         HStack(spacing: spacing) {
-                            ForEach(tvm.items) { item in
-                                ShelfItemView(item: item)
-                                    .environmentObject(quickLookService)
+                            ForEach(namedEntries, id: \.entry.id) { named in
+                                switch named.entry {
+                                case .single(let item):
+                                    ShelfItemView(item: item)
+                                        .environmentObject(quickLookService)
+                                case .group(let groupID, let members):
+                                    NestGroupCardView(groupID: groupID, members: members, name: named.name)
+                                        .environmentObject(quickLookService)
+                                }
                             }
                         }
                     }

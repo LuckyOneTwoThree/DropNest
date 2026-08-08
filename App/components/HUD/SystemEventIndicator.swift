@@ -8,7 +8,6 @@ struct SystemEventIndicatorModifier: View {
     @Binding var value: CGFloat {
         didSet {
             DispatchQueue.main.async {
-                self.sendEventBack(value)
                 self.vm.objectWillChange.send()
             }
         }
@@ -46,7 +45,7 @@ struct SystemEventIndicatorModifier: View {
             default:
                 EmptyView()
             }
-            DraggableProgressBar(value: $value)
+            DraggableProgressBar(value: $value, onChange: sendEventBack)
             if Defaults[.showClosedNotchHUDPercentage] {
                 Text("\(Int(value * 100))%")
                     .font(.system(size: 12, weight: .medium))

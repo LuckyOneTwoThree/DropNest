@@ -54,6 +54,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
+    @MainActor
     func applicationWillTerminate(_ notification: Notification) {
         NotificationCenter.default.removeObserver(self)
         if let observer = screenLockedObserver {
@@ -66,6 +67,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         MusicManager.shared.destroy()
         XPCHelperClient.shared.stopMonitoringAccessibilityAuthorization()
+        // 清理摇晃检测器采样与悬浮暂存巢群
+        ShakeGestureDetector.shared.reset()
+        FloatingNestManager.shared.cleanup()
         cleanupDragDetectors()
         cleanupWindows()
     }
@@ -197,6 +201,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // 摇晃召唤悬浮暂存框（R2）：拖拽移动采样喂入检测器；离开刘海区域/拖拽结束时重置
+        detector.onDragMove = { point in
+            Task { @MainActor in
+                ShakeGestureDetector.shared.feed(point)
+            }
+        }
+
+        // v2.1：内容拖拽开始 → 创建空巢胚；结束 → 清理未使用的空巢胚
+        detector.onContentDragStart = { point in
+            Task { @MainActor in
+                FloatingNestManager.shared.handleDragStart(at: point)
+            }
+        }
+        detector.onContentDragEnd = {
+            Task { @MainActor in
+                FloatingNestManager.shared.handleDragEnd()
+                ShakeGestureDetector.shared.reset()
+            }
+        }
+
+        detector.onDragExitsNotchRegion = {
+            Task { @MainActor in
+                ShakeGestureDetector.shared.reset()
+            }
+        }
+
+        detector.onDragEnd = {
+            Task { @MainActor in
+                ShakeGestureDetector.shared.reset()
+            }
+        }
+
         dragDetectors[uuid] = detector
         detector.startMonitoring()
     }
@@ -262,7 +298,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.alphaValue = 1
     }
 
+    // MARK: - 单实例保护
+
+    /// 终止同 bundle id 的其他运行实例，保留当前（最新）实例。
+    /// 防止多实例并发读写同一容器内的 items.json / blobs 造成数据损坏。
+    private func enforceSingleInstance() {
+        let mine = ProcessInfo.processInfo.processIdentifier
+        let bundleID = Bundle.main.bundleIdentifier ?? ""
+        for app in NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+        where app.processIdentifier != mine {
+            app.terminate()
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // 单实例保护：多个实例共享同一沙盒容器，并发读写 items.json/blobs 会互相踩踏
+        // （实测出现过 prune 删 blob 而另一实例仍引用 → 图片缩略图丢失）。保留最新启动的实例。
+        enforceSingleInstance()
+
         // Trimmed build removed the onboarding flow; mark first launch as complete
         // so hover-to-open in ContentView is not permanently blocked (see handleHover).
         UserDefaults.standard.set(false, forKey: "firstLaunch")
@@ -360,6 +413,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // 亮度/键盘背光管理器（通过 XPC Helper 访问私有框架）
             _ = BrightnessManager.shared
             _ = KeyboardBacklightManager.shared
+            // 摇晃召唤悬浮暂存框（R2）：接线 onShake → FloatingNestManager；
+            // 面板落巢后同步在刘海侧展开文件架，让用户立刻看到入巢结果
+            FloatingNestManager.shared.start()
+            FloatingNestManager.shared.onDeposit = { [weak self] screen in
+                Task { @MainActor in
+                    self?.handleDragEntersNotchRegion(onScreen: screen)
+                }
+            }
             // 启动辅助功能授权状态轮询
             XPCHelperClient.shared.startMonitoringAccessibilityAuthorization()
         }

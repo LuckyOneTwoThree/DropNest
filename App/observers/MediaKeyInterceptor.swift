@@ -140,8 +140,26 @@ final class MediaKeyInterceptor {
             }
         }
 
+        // 检查对应能力是否启用。未启用的类别放行原生事件（透传），避免拦截后无 HUD 又抑制原生 bezel。
+        if !isCapabilityEnabled(for: keyType) {
+            return Unmanaged.passRetained(cgEvent)
+        }
+
         handleKeyPress(keyType: keyType, option: option, shift: shift, command: command)
         return nil
+    }
+
+    /// 按键类别对应的独立功能开关是否启用。
+    /// 在 hudReplacement 主开关开启的前提下，单独判断音量/亮度/键盘背光。
+    private func isCapabilityEnabled(for keyType: NXKeyType) -> Bool {
+        switch keyType {
+        case .soundUp, .soundDown, .mute:
+            return Defaults[.volumeHUDEnabled]
+        case .brightnessUp, .brightnessDown:
+            return Defaults[.brightnessHUDEnabled]
+        case .keyboardBrightnessUp, .keyboardBrightnessDown:
+            return Defaults[.keyboardBacklightHUDEnabled]
+        }
     }
 
     private func handleOptionAction(for keyType: NXKeyType, command: Bool) -> Bool {

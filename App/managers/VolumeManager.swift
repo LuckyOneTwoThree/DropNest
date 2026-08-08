@@ -162,10 +162,12 @@ final class VolumeManager: NSObject, ObservableObject {
         }
     }
 
-    private func setupAudioListener() {
-        let deviceID = systemOutputDeviceID()
-        guard deviceID != kAudioObjectUnknown else { return }
+    /// 已注册的设备级 listener（deviceID + address + block），切换默认设备时用于精确移除。
+    private var deviceListenerBlocks: [(AudioObjectID, AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
 
+    private func setupAudioListener() {
+        // 系统级：监听默认输出设备变化。切换设备时需重新注册新设备的 volume/mute listener，
+        // 否则旧 deviceID 上的 listener 无法感知新设备变化。
         var defaultDevAddr = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDefaultOutputDevice,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -174,8 +176,24 @@ final class VolumeManager: NSObject, ObservableObject {
         AudioObjectAddPropertyListenerBlock(
             AudioObjectID(kAudioObjectSystemObject), &defaultDevAddr, nil
         ) { _, _ in
-            self.fetchCurrentVolume()
+            self.handleDefaultDeviceChange()
         }
+
+        // 设备级：注册当前默认设备的 volume/mute listener
+        registerDeviceListeners()
+    }
+
+    /// 默认输出设备变化时，移除旧设备 listener，注册新设备 listener，并拉取当前音量。
+    private func handleDefaultDeviceChange() {
+        unregisterDeviceListeners()
+        registerDeviceListeners()
+        fetchCurrentVolume()
+    }
+
+    /// 在当前默认输出设备上注册 volume/mute 属性监听。
+    private func registerDeviceListeners() {
+        let deviceID = systemOutputDeviceID()
+        guard deviceID != kAudioObjectUnknown else { return }
 
         var masterAddr = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyVolumeScalar,
@@ -183,9 +201,7 @@ final class VolumeManager: NSObject, ObservableObject {
             mElement: kAudioObjectPropertyElementMain
         )
         if AudioObjectHasProperty(deviceID, &masterAddr) {
-            AudioObjectAddPropertyListenerBlock(deviceID, &masterAddr, nil) { _, _ in
-                self.fetchCurrentVolume()
-            }
+            addDeviceListener(deviceID: deviceID, address: masterAddr)
         } else {
             for ch in [UInt32(1), UInt32(2)] {
                 var chAddr = AudioObjectPropertyAddress(
@@ -194,9 +210,7 @@ final class VolumeManager: NSObject, ObservableObject {
                     mElement: ch
                 )
                 if AudioObjectHasProperty(deviceID, &chAddr) {
-                    AudioObjectAddPropertyListenerBlock(deviceID, &chAddr, nil) { _, _ in
-                        self.fetchCurrentVolume()
-                    }
+                    addDeviceListener(deviceID: deviceID, address: chAddr)
                 }
             }
         }
@@ -207,10 +221,27 @@ final class VolumeManager: NSObject, ObservableObject {
             mElement: kAudioObjectPropertyElementMain
         )
         if AudioObjectHasProperty(deviceID, &muteAddr) {
-            AudioObjectAddPropertyListenerBlock(deviceID, &muteAddr, nil) { _, _ in
-                self.fetchCurrentVolume()
-            }
+            addDeviceListener(deviceID: deviceID, address: muteAddr)
         }
+    }
+
+    /// 注册单个属性监听并保存 block 引用，以便后续精确移除。
+    private func addDeviceListener(deviceID: AudioObjectID, address: AudioObjectPropertyAddress) {
+        let block: AudioObjectPropertyListenerBlock = { _, _ in
+            self.fetchCurrentVolume()
+        }
+        var addr = address
+        AudioObjectAddPropertyListenerBlock(deviceID, &addr, nil, block)
+        deviceListenerBlocks.append((deviceID, address, block))
+    }
+
+    /// 移除所有已注册的设备级 listener。
+    private func unregisterDeviceListeners() {
+        for (deviceID, address, block) in deviceListenerBlocks {
+            var addr = address
+            AudioObjectRemovePropertyListenerBlock(deviceID, &addr, nil, block)
+        }
+        deviceListenerBlocks.removeAll()
     }
 
     private func readVolumeInternal() -> Float32? {

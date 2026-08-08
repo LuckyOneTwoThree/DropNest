@@ -168,6 +168,45 @@ struct ShelfItemView: View {
     
 }
 
+// MARK: - Shared drag payload assembly
+
+/// 拖拽载荷组装：ShelfItemView 多选拖出与 NestGroupCardView 集合整体拖出共用，保证行为一致
+@MainActor
+enum ShelfDragPayloadWriter {
+    /// 为条目创建 pasteboard item；file 类型会启动安全作用域访问并登记到 securityScopedURLs，
+    /// 由调用方在拖拽结束后统一 stopAccessingSecurityScopedResource
+    static func makePasteboardItem(for item: ShelfItem, securityScopedURLs: inout [URL]) -> NSPasteboardItem? {
+        let pasteboardItem = NSPasteboardItem()
+
+        switch item.kind {
+        case .file:
+            guard let url = ShelfStateViewModel.shared.resolveAndUpdateBookmark(for: item) else {
+                pasteboardItem.setString(item.displayName, forType: .string)
+                return pasteboardItem
+            }
+
+            // Start accessing security-scoped resource and keep it active during drag
+            if url.startAccessingSecurityScopedResource() {
+                securityScopedURLs.append(url)
+                NSLog("🔐 Started security-scoped access for drag: \(url.path)")
+            }
+
+            pasteboardItem.setString(url.absoluteString, forType: .fileURL)
+            pasteboardItem.setString(url.path, forType: .string)
+            return pasteboardItem
+
+        case .text(let string):
+            pasteboardItem.setString(string, forType: .string)
+            return pasteboardItem
+
+        case .link(let url):
+            pasteboardItem.setString(url.absoluteString, forType: .URL)
+            pasteboardItem.setString(url.absoluteString, forType: .string)
+            return pasteboardItem
+        }
+    }
+}
+
 // MARK: - Draggable Click Handler with NSDraggingSource
 private struct DraggableClickHandler<Content: View>: NSViewRepresentable {
     let item: ShelfItem
@@ -292,34 +331,7 @@ private struct DraggableClickHandler<Content: View>: NSViewRepresentable {
         }
         
         private func createPasteboardItem(for item: ShelfItem) -> NSPasteboardItem? {
-            let pasteboardItem = NSPasteboardItem()
-
-            switch item.kind {
-            case .file:
-                guard let url = ShelfStateViewModel.shared.resolveAndUpdateBookmark(for: item) else {
-                    pasteboardItem.setString(item.displayName, forType: .string)
-                    return pasteboardItem
-                }
-                
-                // Start accessing security-scoped resource and keep it active during drag
-                if url.startAccessingSecurityScopedResource() {
-                    draggedURLs.append(url)
-                    NSLog("🔐 Started security-scoped access for drag: \(url.path)")
-                }
-                
-                pasteboardItem.setString(url.absoluteString, forType: .fileURL)
-                pasteboardItem.setString(url.path, forType: .string)
-                return pasteboardItem
-
-            case .text(let string):
-                pasteboardItem.setString(string, forType: .string)
-                return pasteboardItem
-
-            case .link(let url):
-                pasteboardItem.setString(url.absoluteString, forType: .URL)
-                pasteboardItem.setString(url.absoluteString, forType: .string)
-                return pasteboardItem
-            }
+            ShelfDragPayloadWriter.makePasteboardItem(for: item, securityScopedURLs: &draggedURLs)
         }
         
         // MARK: - NSDraggingSource

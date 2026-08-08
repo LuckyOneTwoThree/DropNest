@@ -367,6 +367,18 @@ final class ShelfItemViewModel: ObservableObject {
             menu.addItem(copyPathItem)
         }
 
+        // 集合操作：多选可成组；组内条目可流转/查看/解散
+        if selectedItems.count > 1 {
+            menu.addItem(NSMenuItem.separator())
+            addMenuItem(title: "组成集合")
+        } else if let groupID = item.groupID {
+            menu.addItem(NSMenuItem.separator())
+            addMenuItem(title: "在桌面打开此集合")
+            let isExpanded = ShelfStateViewModel.shared.expandedGroupIDs.contains(groupID)
+            addMenuItem(title: isExpanded ? "收起查看" : "就地查看")
+            addMenuItem(title: "解散集合")
+        }
+
         menu.addItem(NSMenuItem.separator())
         addMenuItem(title: "移除")
 
@@ -543,7 +555,28 @@ final class ShelfItemViewModel: ObservableObject {
             case "移除":
                 let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
                 for it in selected { ShelfActionService.remove(it) }
-                
+
+            case "组成集合":
+                let selectedIDs = ShelfSelectionModel.shared.selectedIDs
+                guard selectedIDs.count > 1 else { break }
+                ShelfStateViewModel.shared.createGroup(from: selectedIDs)
+                ShelfSelectionModel.shared.clear()
+
+            case "解散集合":
+                if let groupID = item.groupID {
+                    ShelfStateViewModel.shared.dissolveGroup(groupID)
+                }
+
+            case "在桌面打开此集合":
+                if let groupID = item.groupID {
+                    FloatingNestManager.shared.toggle(groupID: groupID)
+                }
+
+            case "就地查看", "收起查看":
+                if let groupID = item.groupID {
+                    ShelfStateViewModel.shared.toggleGroupExpanded(groupID)
+                }
+
             case "移除背景":
                 handleRemoveBackground()
                 

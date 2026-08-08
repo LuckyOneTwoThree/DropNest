@@ -19,7 +19,12 @@ class BatteryStatusViewModel: ObservableObject {
     @Published private(set) var statusText: String = ""
 
     private let managerBattery = BatteryActivityManager.shared
-    private var managerBatteryId: Int?
+    private var managerBatteryId: UUID?
+
+    /// 低电量通知阈值（百分比）。电量降到该值及以下且未插电时触发一次折叠态通知。
+    private let lowBatteryThreshold: Float = 20
+    /// 是否已处于低电量通知状态，避免在低电量区间内每次变化都重复触发。
+    private var hasNotifiedLowBattery = false
 
     static let shared = BatteryStatusViewModel()
 
@@ -58,6 +63,7 @@ class BatteryStatusViewModel: ObservableObject {
             withAnimation {
                 self.levelBattery = level
             }
+            checkLowBatteryNotification(level: level)
 
         case .lowPowerModeChanged(let isEnabled):
             print("⚡ Low power mode: \(isEnabled ? "Enabled" : "Disabled")")
@@ -108,6 +114,21 @@ class BatteryStatusViewModel: ObservableObject {
         }
     }
 
+    /// 低电量（≤阈值）且未插电时触发一次折叠态通知；电量恢复或插电后重置标记，允许下次再触发。
+    /// 仅在「正常 → 低电」的状态转换时通知，避免在低电量区间内每次电量变化都重复打扰。
+    private func checkLowBatteryNotification(level: Float) {
+        let isLow = level <= lowBatteryThreshold && !isPluggedIn && !isCharging
+        if isLow && !hasNotifiedLowBattery {
+            hasNotifiedLowBattery = true
+            withAnimation {
+                self.statusText = "电量不足 \(Int(level))%"
+            }
+            notifyImportanChangeStatus()
+        } else if !isLow {
+            hasNotifiedLowBattery = false
+        }
+    }
+
     /// 重要变化时触发刘海折叠态电池通知
     private func notifyImportanChangeStatus(delay: Double = 0.0) {
         Task {
@@ -118,7 +139,7 @@ class BatteryStatusViewModel: ObservableObject {
 
     deinit {
         print("🔌 Cleaning up battery monitoring...")
-        if let managerBatteryId: Int = managerBatteryId {
+        if let managerBatteryId = managerBatteryId {
             managerBattery.removeObserver(byId: managerBatteryId)
         }
     }

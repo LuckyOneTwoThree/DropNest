@@ -18,6 +18,12 @@ final class DragDetector {
     var onDragEntersNotchRegion: VoidCallback?
     var onDragExitsNotchRegion: VoidCallback?
     var onDragMove: PositionCallback?
+    /// 拖拽结束（leftMouseUp）回调，供摇晃检测器等重置采样
+    var onDragEnd: VoidCallback?
+    /// v2.1：检测到内容拖拽开始（drag pasteboard 出现有效内容）时触发——驱动巢群显示
+    var onContentDragStart: PositionCallback?
+    /// v2.1：内容拖拽结束（leftMouseUp）时触发——驱动空巢胚清理
+    var onContentDragEnd: VoidCallback?
 
 
     private var mouseDownMonitor: Any?
@@ -65,18 +71,20 @@ final class DragDetector {
             guard let self = self else { return }
             guard self.isDragging else { return }
 
+            let mouseLocation = NSEvent.mouseLocation
             let newContent = self.dragPasteboard.changeCount != self.pasteboardChangeCount
-            
+
             // Detect if actual content is being dragged AND it's valid content
             if newContent && !self.isContentDragging && self.hasValidDragContent() {
                 self.isContentDragging = true
+                // v2.1：内容拖拽开始 → 通知巢群管理器创建空巢胚
+                self.onContentDragStart?(mouseLocation)
             }
 
             // Only process position when content is being dragged
             if self.isContentDragging {
-                let mouseLocation = NSEvent.mouseLocation
                 self.onDragMove?(mouseLocation)
-                
+
                 // Track notch region entry/exit
                 let containsMouse = self.notchRegion.contains(mouseLocation)
                 if containsMouse && !self.hasEnteredNotchRegion {
@@ -92,11 +100,17 @@ final class DragDetector {
         mouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { [weak self] _ in
             guard let self = self else { return }
             guard self.isDragging else { return }
-            
+
+            let wasContentDragging = self.isContentDragging
             self.isDragging = false
             self.isContentDragging = false
             self.hasEnteredNotchRegion = false
             self.pasteboardChangeCount = -1
+            self.onDragEnd?()
+            // v2.1：内容拖拽结束 → 通知巢群管理器清理空巢胚
+            if wasContentDragging {
+                self.onContentDragEnd?()
+            }
         }
     }
 

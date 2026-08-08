@@ -15,7 +15,7 @@ class BatteryActivityManager {
     var onTimeToFullChargeChange: ((Int) -> Void)?
 
     private var batterySource: CFRunLoopSource?
-    private var observers: [(BatteryEvent) -> Void] = []
+    private var observers: [UUID: (BatteryEvent) -> Void] = [:]
     private var previousBatteryInfo: BatteryInfo?
     private var notificationQueue: [BatteryEvent] = []
     private var isProcessingNotifications = false
@@ -256,22 +256,23 @@ class BatteryActivityManager {
         }
     }
 
-    /// 添加观察者
-    func addObserver(_ observer: @escaping (BatteryEvent) -> Void) -> Int {
-        observers.append(observer)
-        return observers.count - 1
+    /// 添加观察者，返回稳定 UUID 标识符用于后续移除。
+    /// 注意：不可用数组索引作为 ID——remove(at:) 会导致后续索引前移失效。
+    func addObserver(_ observer: @escaping (BatteryEvent) -> Void) -> UUID {
+        let id = UUID()
+        observers[id] = observer
+        return id
     }
 
-    /// 按 ID 移除观察者
-    func removeObserver(byId id: Int) {
-        guard id >= 0 && id < observers.count else { return }
-        observers.remove(at: id)
+    /// 按 UUID 移除观察者（稳定标识，移除不影响其他观察者的 ID）。
+    func removeObserver(byId id: UUID) {
+        observers.removeValue(forKey: id)
     }
 
     private func notifyObservers(event: BatteryEvent) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            for observer in self.observers {
+            for observer in self.observers.values {
                 observer(event)
             }
         }

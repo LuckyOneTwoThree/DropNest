@@ -85,9 +85,27 @@ extension Defaults.Keys {
     static let boringShelf = Key<Bool>("boringShelf", default: true)
     static let openShelfByDefault = Key<Bool>("openShelfByDefault", default: true)
     static let shelfTapToOpen = Key<Bool>("shelfTapToOpen", default: true)
-    static let copyOnDrag = Key<Bool>("copyOnDrag", default: false)
+    static let copyOnDrag = Key<Bool>("copyOnDrag", default: true)
     static let autoRemoveShelfItems = Key<Bool>("autoRemoveShelfItems", default: false)
     static let expandedDragDetection = Key<Bool>("expandedDragDetection", default: true)
+    /// FR-N11：批量拖入自动成组
+    static let nestAutoGroupOnBatchDrop = Key<Bool>("nestAutoGroupOnBatchDrop", default: false)
+
+    // MARK: Floating Nest（悬浮暂存巢群）
+    /// FR-F5：悬浮暂存巢总开关（关闭时检测器与巢群全链路停用）
+    static let floatingNestEnabled = Key<Bool>("floatingNestEnabled", default: true)
+    /// 摇晃灵敏度 0~1，越高所需振幅越小
+    static let shakeSensitivity = Key<Double>("shakeSensitivity", default: 0.5)
+    /// 摇晃判定基准振幅（pt）
+    static let shakeMinAmplitude = Key<Double>("shakeMinAmplitude", default: 8)
+    /// v2：拖拽开始即自动显示空巢胚（false = 仅摇晃召唤）
+    static let nestShowOnDragStart = Key<Bool>("nestShowOnDragStart", default: true)
+    /// v2：网格列数上限（2~4，默认 3），超出纵向滚动
+    static let nestMaxGridColumns = Key<Int>("nestMaxGridColumns", default: 3)
+    /// v2：正式巢位置记忆（groupID 字符串 → "x,y" 编码）
+    static let nestPositions = Key<[String: String]>("nestPositions", default: [:])
+    /// 旧键（已废弃，由 nestShowOnDragStart 替代），保留以兼容旧设置
+    static let floatingNestAutoShowOnDrag = Key<Bool>("floatingNestAutoShowOnDrag", default: false)
 
     // MARK: Clipboard
     static let clipboardHistoryEnabled = Key<Bool>("clipboardHistoryEnabled", default: true)
@@ -112,6 +130,10 @@ extension Defaults.Keys {
 
     // MARK: HUD
     static let hudReplacement = Key<Bool>("hudReplacement", default: false)
+    /// 各能力独立开关（在 hudReplacement 主开关开启的前提下，单独控制各类按键的拦截与 HUD 显示）
+    static let volumeHUDEnabled = Key<Bool>("volumeHUDEnabled", default: true)
+    static let brightnessHUDEnabled = Key<Bool>("brightnessHUDEnabled", default: true)
+    static let keyboardBacklightHUDEnabled = Key<Bool>("keyboardBacklightHUDEnabled", default: true)
     static let inlineHUD = Key<Bool>("inlineHUD", default: false)
     static let enableGradient = Key<Bool>("enableGradient", default: false)
     static let systemEventIndicatorShadow = Key<Bool>("systemEventIndicatorShadow", default: false)
