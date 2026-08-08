@@ -16,6 +16,10 @@ import ObjectiveC
 final class ShelfItemViewModel: ObservableObject {
     @Published private(set) var item: ShelfItem
     @Published var thumbnail: NSImage?
+    /// 缓存的 fallback 图标（书签解析 + NSWorkspace.icon 结果），避免 body 路径重计算
+    @Published private(set) var cachedFallbackIcon: NSImage?
+    /// 缓存的显示名（书签解析 + 磁盘读取结果），避免 body 路径重计算
+    @Published private(set) var cachedDisplayName: String = ""
     @Published var isDropTargeted: Bool = false
     @Published var isRenaming: Bool = false
     @Published var draftTitle: String = ""
@@ -29,7 +33,14 @@ final class ShelfItemViewModel: ObservableObject {
     init(item: ShelfItem) {
         self.item = item
         self.draftTitle = item.displayName
+        refreshCache()
         Task { await loadThumbnail() }
+    }
+
+    /// 刷新缓存的 displayName 和 fallbackIcon（item 变化时调用）
+    func refreshCache() {
+        cachedDisplayName = item.displayName
+        cachedFallbackIcon = item.icon
     }
 
     var isSelected: Bool { selection.isSelected(item.id) }

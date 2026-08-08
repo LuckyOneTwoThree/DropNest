@@ -17,6 +17,7 @@ final class ShelfPersistenceService {
     private let fileURL: URL
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private var saveTask: Task<Void, Never>?
 
     private init() {
         let fm = FileManager.default
@@ -70,10 +71,24 @@ final class ShelfPersistenceService {
         }
     }
 
+    /// 防抖保存：800ms 内多次调用合并为一次后台写入（encode 在主线程，write 在后台线程）
     func save(_ items: [ShelfItem]) {
+        saveTask?.cancel()
+        guard let data = try? encoder.encode(items) else { return }
+        let url = fileURL
+        saveTask = Task.detached(priority: .utility) {
+            try? await Task.sleep(for: .milliseconds(800))
+            guard !Task.isCancelled else { return }
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    /// 立即保存（应用退出等场景）
+    func saveImmediately(_ items: [ShelfItem]) {
+        saveTask?.cancel()
         do {
             let data = try encoder.encode(items)
-            try data.write(to: fileURL, options: Data.WritingOptions.atomic)
+            try data.write(to: fileURL, options: .atomic)
         } catch {
             print("Failed to save shelf items: \(error.localizedDescription)")
         }

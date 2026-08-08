@@ -9,6 +9,7 @@ private let kSystemDefinedEventType = CGEventType(rawValue: 14)!
 /// 系统媒体键拦截器，通过 CGEvent tap 拦截音量/亮度按键，
 /// 抑制系统原生 bezel 并改由刘海 HUD 显示。
 /// 需要辅助功能权限（运行时用户授予，非 entitlement）。
+@MainActor
 final class MediaKeyInterceptor {
     static let shared = MediaKeyInterceptor()
 
@@ -81,7 +82,12 @@ final class MediaKeyInterceptor {
             callback: { _, _, cgEvent, userInfo in
                 guard let userInfo else { return Unmanaged.passRetained(cgEvent) }
                 let interceptor = Unmanaged<MediaKeyInterceptor>.fromOpaque(userInfo).takeUnretainedValue()
-                return interceptor.handleEvent(cgEvent)
+                // CGEvent tap 挂在主 RunLoop（CFRunLoopGetMain），回调在主线程触发；
+                // 但 C 回调本身是 nonisolated，handleEvent 是 @MainActor 隔离方法，
+                // 故用 MainActor.assumeIsolated 同步切入 MainActor（回调必须同步返回事件）。
+                return MainActor.assumeIsolated {
+                    interceptor.handleEvent(cgEvent)
+                }
             },
             userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
         )

@@ -1,35 +1,10 @@
 import Foundation
-import ApplicationServices
 import IOKit
 import CoreGraphics
 
 /// XPC Helper 实现——非沙盒环境下访问私有框架和 IOKit。
-/// 负责辅助功能授权检查、屏幕亮度控制（DisplayServices + IOKit）、键盘背光控制（CoreBrightness）。
+/// 负责屏幕亮度控制（DisplayServices + IOKit）、键盘背光控制（CoreBrightness）。
 class DropNestXPCHelper: NSObject, DropNestXPCHelperProtocol {
-
-    // MARK: - 辅助功能
-
-    @objc func isAccessibilityAuthorized(with reply: @escaping (Bool) -> Void) {
-        reply(AXIsProcessTrusted())
-    }
-
-    @objc func requestAccessibilityAuthorization() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-        AXIsProcessTrustedWithOptions(options)
-    }
-
-    @objc func ensureAccessibilityAuthorization(_ promptIfNeeded: Bool, with reply: @escaping (Bool) -> Void) {
-        if AXIsProcessTrusted() {
-            reply(true)
-            return
-        }
-        if promptIfNeeded {
-            requestAccessibilityAuthorization()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            reply(AXIsProcessTrusted())
-        }
-    }
 
     // MARK: - 键盘背光 (CoreBrightness 私有框架)
 

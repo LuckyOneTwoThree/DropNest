@@ -23,6 +23,12 @@ final class QuickLookService: ObservableObject {
     private var accessingURLs: [URL] = []
     private var previewPanelObserver: Any?
 
+    deinit {
+        for url in accessingURLs {
+            url.stopAccessingSecurityScopedResource()
+        }
+    }
+
     func show(urls: [URL], selectFirst: Bool = true, slideshow: Bool = false) {
         guard !urls.isEmpty else { return }
         stopAccessingCurrentURLs()

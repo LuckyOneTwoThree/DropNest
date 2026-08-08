@@ -1,6 +1,7 @@
 import AppKit
 
 /// 显示器亮度管理器，通过 XPC Helper 调用 DisplayServices/IOKit 私有 API 读写屏幕亮度。
+@MainActor
 final class BrightnessManager: ObservableObject {
     static let shared = BrightnessManager()
 
@@ -51,12 +52,11 @@ final class BrightnessManager: ObservableObject {
     }
 
     private func publish(brightness: Float, touchDate: Bool) {
-        DispatchQueue.main.async {
-            if self.rawBrightness != brightness || touchDate {
-                if touchDate { self.lastChangeAt = Date() }
-                self.rawBrightness = brightness
-                self.animatedBrightness = brightness
-            }
+        // 类已 @MainActor，所有调用方均在 MainActor 上，无需再 dispatch 到主线程。
+        if rawBrightness != brightness || touchDate {
+            if touchDate { lastChangeAt = Date() }
+            rawBrightness = brightness
+            animatedBrightness = brightness
         }
     }
 }

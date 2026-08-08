@@ -126,6 +126,34 @@ class TemporaryFileStorageService {
             return nil
         }
     }
+
+    private func runZip(_ args: [String], currentDirectory: URL, environment: [String: String]? = nil) async throws {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/zip")
+        proc.arguments = args
+        proc.currentDirectoryURL = currentDirectory
+        if let environment { proc.environment = environment }
+        let errPipe = Pipe()
+        proc.standardError = errPipe
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            proc.terminationHandler = { process in
+                if process.terminationStatus == 0 {
+                    continuation.resume()
+                } else {
+                    let errData = try? errPipe.fileHandleForReading.readToEnd()
+                    let errMsg = String(data: errData ?? Data(), encoding: .utf8) ?? "unknown"
+                    continuation.resume(throwing: NSError(domain: "ZipError", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: errMsg]))
+                }
+            }
+            do {
+                try proc.run()
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
     func createZip(from urls: [URL], suggestedName: String? = nil) async -> URL? {
         let tempDir = URL(fileURLWithPath: NSTemporaryDirectory())
         let uuid = UUID().uuidString
@@ -136,22 +164,6 @@ class TemporaryFileStorageService {
         } catch {
             print("❌ Failed to create zip working directory: \(error)")
             return nil
-        }
-
-        // Helper to run zip process
-        func runZip(arguments: [String], currentDirectory: URL) -> Bool {
-            let proc = Process()
-            proc.executableURL = URL(fileURLWithPath: "/usr/bin/zip")
-            proc.arguments = arguments
-            proc.currentDirectoryURL = currentDirectory
-            do {
-                try proc.run()
-                proc.waitUntilExit()
-                return proc.terminationStatus == 0
-            } catch {
-                print("❌ Failed to run zip: \(error)")
-                return false
-            }
         }
 
         // Single-item optimization: do not copy contents into the working dir.
@@ -166,10 +178,11 @@ class TemporaryFileStorageService {
                 // Run zip from the parent directory so the folder is stored as top-level entry
                 let parent = src.deletingLastPathComponent()
                 let args = ["-r", "-q", archiveURL.path, baseName]
-                let ok = runZip(arguments: args, currentDirectory: parent)
-                if ok {
+                do {
+                    try await runZip(args, currentDirectory: parent)
                     return archiveURL
-                } else {
+                } catch {
+                    print("❌ Failed to run zip: \(error)")
                     return nil
                 }
             } else {
@@ -179,10 +192,11 @@ class TemporaryFileStorageService {
                 let parent = src.deletingLastPathComponent()
                 // -j to junk paths and store only the file
                 let args = ["-j", "-q", archiveURL.path, baseName]
-                let ok = runZip(arguments: args, currentDirectory: parent)
-                if ok {
+                do {
+                    try await runZip(args, currentDirectory: parent)
                     return archiveURL
-                } else {
+                } catch {
+                    print("❌ Failed to run zip: \(error)")
                     return nil
                 }
             }
@@ -207,23 +221,24 @@ class TemporaryFileStorageService {
         let archiveName = suggestedName ?? "Archive.zip"
         let archiveURL = workingDir.appendingPathComponent(archiveName)
         let args = ["-r", "-q", archiveURL.path, "."]
-        let ok = runZip(arguments: args, currentDirectory: workingDir)
-        if ok {
-            // Remove the copied (uncompressed) items so the temp folder contains only the archive
-            do {
-                let contents = try FileManager.default.contentsOfDirectory(at: workingDir, includingPropertiesForKeys: nil)
-                for file in contents {
-                    if file.standardizedFileURL != archiveURL.standardizedFileURL {
-                        try FileManager.default.removeItem(at: file)
-                    }
-                }
-            } catch {
-                print("⚠️ Failed to cleanup working directory after zip: \(error)")
-            }
-            return archiveURL
-        } else {
+        do {
+            try await runZip(args, currentDirectory: workingDir)
+        } catch {
+            print("❌ Failed to run zip: \(error)")
             return nil
         }
+        // Remove the copied (uncompressed) items so the temp folder contains only the archive
+        do {
+            let contents = try FileManager.default.contentsOfDirectory(at: workingDir, includingPropertiesForKeys: nil)
+            for file in contents {
+                if file.standardizedFileURL != archiveURL.standardizedFileURL {
+                    try FileManager.default.removeItem(at: file)
+                }
+            }
+        } catch {
+            print("⚠️ Failed to cleanup working directory after zip: \(error)")
+        }
+        return archiveURL
     }
     
     // MARK: - Content Creation Helpers

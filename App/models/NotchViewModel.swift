@@ -31,6 +31,7 @@ enum NotchTabPreference {
     static var lastActivity: LastActivity = .none
 }
 
+@MainActor
 class NotchViewModel: NSObject, ObservableObject {
     @ObservedObject var coordinator = NotchViewCoordinator.shared
 
@@ -83,8 +84,8 @@ class NotchViewModel: NSObject, ObservableObject {
     /// crossing actor boundaries.
     static var clipboardRowCount: Int = 0
 
-    deinit {
-        destroy()
+    deinit {    
+        // AnyCancellable 在对象释放时自动 cancel，无需手动清理
     }
 
     func destroy() {

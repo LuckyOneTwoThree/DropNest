@@ -34,6 +34,7 @@ struct DropNestApp: App {
     }
 }
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var windows: [String: NSWindow] = [:] // UUID -> NSWindow
@@ -56,6 +57,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     func applicationWillTerminate(_ notification: Notification) {
+        // 退出前立即将货架数据落盘，避免异步 saveTask 被终止而丢失。
+        ShelfPersistenceService.shared.saveImmediately(ShelfStateViewModel.shared.items)
+
         NotificationCenter.default.removeObserver(self)
         if let observer = screenLockedObserver {
             DistributedNotificationCenter.default().removeObserver(observer)
@@ -66,7 +70,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             screenUnlockedObserver = nil
         }
         MusicManager.shared.destroy()
-        XPCHelperClient.shared.stopMonitoringAccessibilityAuthorization()
         // 清理摇晃检测器采样与悬浮暂存巢群
         ShakeGestureDetector.shared.reset()
         FloatingNestManager.shared.cleanup()
@@ -271,7 +274,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.orderFrontRegardless()
         NotchSpaceManager.shared.notchSpace.windows.insert(window)
 
-        // Observe when the window's screen changes so we can update drag detectors
+        // Observe when the window's screen changes so we can update drag detectors.
+        // 先移除旧 observer，避免重复创建窗口时泄漏上一个 token。
+        if let old = windowScreenDidChangeObserver {
+            NotificationCenter.default.removeObserver(old)
+        }
         windowScreenDidChangeObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didChangeScreenNotification,
             object: window,
@@ -421,8 +428,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     self?.handleDragEntersNotchRegion(onScreen: screen)
                 }
             }
-            // 启动辅助功能授权状态轮询
-            XPCHelperClient.shared.startMonitoringAccessibilityAuthorization()
         }
 
         previousScreens = NSScreen.screens
@@ -440,11 +445,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         previousScreens = currentScreens
 
         if screensChanged {
-            DispatchQueue.main.async { [weak self] in
-                self?.cleanupWindows()
-                self?.adjustWindowPosition()
-                self?.setupDragDetectors()
-            }
+            // 类已 @MainActor，didChangeScreenParametersNotification 也在主线程投递，
+            // 直接同步清理即可，无需再 dispatch 到主线程。
+            cleanupWindows()
+            adjustWindowPosition()
+            setupDragDetectors()
         }
     }
 

@@ -5,6 +5,7 @@ import Foundation
 
 /// 系统音量管理器，基于 CoreAudio 读写/监听系统输出设备音量。
 /// 沙盒内可用，无需额外权限。
+@MainActor
 final class VolumeManager: NSObject, ObservableObject {
     static let shared = VolumeManager()
 
@@ -127,7 +128,8 @@ final class VolumeManager: NSObject, ObservableObject {
         }
         if !volumes.isEmpty {
             let avg = max(0, min(1, volumes.reduce(0, +) / Float32(volumes.count)))
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
                 if self.rawVolume != avg {
                     if self.didInitialFetch {
                         self.lastChangeAt = Date()
@@ -153,7 +155,8 @@ final class VolumeManager: NSObject, ObservableObject {
                 if AudioObjectGetPropertyData(deviceID, &muteAddr, 0, nil, &mSize, &muted) == noErr
                 {
                     let newMuted = muted != 0
-                    DispatchQueue.main.async {
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self else { return }
                         if self.isMuted != newMuted { self.lastChangeAt = Date() }
                         self.isMuted = newMuted
                     }
@@ -176,7 +179,7 @@ final class VolumeManager: NSObject, ObservableObject {
         AudioObjectAddPropertyListenerBlock(
             AudioObjectID(kAudioObjectSystemObject), &defaultDevAddr, nil
         ) { _, _ in
-            self.handleDefaultDeviceChange()
+            Task { @MainActor in self.handleDefaultDeviceChange() }
         }
 
         // 设备级：注册当前默认设备的 volume/mute listener
@@ -228,7 +231,7 @@ final class VolumeManager: NSObject, ObservableObject {
     /// 注册单个属性监听并保存 block 引用，以便后续精确移除。
     private func addDeviceListener(deviceID: AudioObjectID, address: AudioObjectPropertyAddress) {
         let block: AudioObjectPropertyListenerBlock = { _, _ in
-            self.fetchCurrentVolume()
+            Task { @MainActor in self.fetchCurrentVolume() }
         }
         var addr = address
         AudioObjectAddPropertyListenerBlock(deviceID, &addr, nil, block)
@@ -378,7 +381,8 @@ final class VolumeManager: NSObject, ObservableObject {
     }
 
     private func publish(volume: Float32, muted: Bool, touchDate: Bool) {
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
             if touchDate { self.lastChangeAt = Date() }
             self.rawVolume = volume
             self.isMuted = muted

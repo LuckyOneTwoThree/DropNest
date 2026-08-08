@@ -99,7 +99,7 @@ struct ShelfView: View {
     /// 一键展开/收起全部桌面巢群。仅当存在集合组时显示。
     @ViewBuilder
     private var nestGroupButton: some View {
-        let hasGroups = tvm.entries.contains { if case .group = $0 { return true }; return false }
+        let hasGroups = tvm.items.contains { $0.groupID != nil }
         if hasGroups {
             Button {
                 if FloatingNestManager.shared.hasVisiblePanels {
@@ -177,14 +177,16 @@ struct ShelfView: View {
                     .padding(.top, -4) // 顶栏向虚线边框靠近
 
                     ScrollView(.horizontal) {
-                        HStack(spacing: spacing) {
+                        LazyHStack(spacing: spacing) {
                             ForEach(namedEntries, id: \.entry.id) { named in
                                 switch named.entry {
                                 case .single(let item):
                                     ShelfItemView(item: item)
+                                        .equatable()
                                         .environmentObject(quickLookService)
                                 case .group(let groupID, let members):
                                     NestGroupCardView(groupID: groupID, members: members, name: named.name)
+                                        .equatable()
                                         .environmentObject(quickLookService)
                                 }
                             }

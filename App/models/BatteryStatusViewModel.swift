@@ -5,6 +5,7 @@ import SwiftUI
 
 /// 电池状态 ViewModel，把 BatteryActivityManager 的事件流转成 SwiftUI 可绑定的 @Published 属性，
 /// 并在重要变化（电源/充电/低功耗）时触发刘海折叠态横向电池通知。
+@MainActor
 class BatteryStatusViewModel: ObservableObject {
 
     @ObservedObject var coordinator = NotchViewCoordinator.shared
@@ -137,11 +138,8 @@ class BatteryStatusViewModel: ObservableObject {
         }
     }
 
-    deinit {
-        print("🔌 Cleaning up battery monitoring...")
-        if let managerBatteryId = managerBatteryId {
-            managerBattery.removeObserver(byId: managerBatteryId)
-        }
-    }
+    /// BatteryStatusViewModel 为单例（shared），deinit 不会触发；移除观察者依赖
+    /// @MainActor 隔离的 managerBattery.removeObserver(byId:)，无法在 nonisolated
+    /// deinit 中调用，单例生命周期内观察者始终有效，无需手动移除。
 
 }

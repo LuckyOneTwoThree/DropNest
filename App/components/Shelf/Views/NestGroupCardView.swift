@@ -51,7 +51,7 @@ struct NestGroupCardView: View {
 
     private var collapsedCard: some View {
         ZStack {
-            VStack(alignment: .center, spacing: 6) {
+            VStack(alignment: .center, spacing: 10) {
                 stackedIconView
                 Text(name)
                     .font(.system(size: 11, weight: .medium, design: .rounded))
@@ -60,18 +60,17 @@ struct NestGroupCardView: View {
                     .truncationMode(.middle)
                     .frame(width: 90, height: 14, alignment: .center)
             }
-            .frame(width: 105)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 5)
+            .padding(.vertical, 16)
+            .padding(.horizontal, 10)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(.ultraThinMaterial)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .strokeBorder(Color.accentColor.opacity(0.25), lineWidth: 1)
                     )
             )
-            .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
             .overlay(alignment: .topTrailing) { countBadge }
 
             GroupCardDragHandler(
@@ -86,22 +85,25 @@ struct NestGroupCardView: View {
     /// 精炼叠层图标：扇形展开，最前层最大，后方逐层缩窄偏移
     private var stackedIconView: some View {
         let images = displayImages
+        let iconSize: CGFloat = 42
+        let stackOffset: CGFloat = 5
         return ZStack {
             ForEach(Array(images.enumerated()), id: \.offset) { index, image in
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 44, height: 44)
+                    .frame(width: iconSize, height: iconSize)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
+                    .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
                     .offset(
-                        x: CGFloat(index) * 4 - CGFloat(images.count - 1) * 2,
-                        y: -CGFloat(index) * 3
+                        x: CGFloat(index) * stackOffset - CGFloat(images.count - 1) * stackOffset / 2,
+                        y: CGFloat(images.count - 1 - index) * stackOffset
                     )
                     .zIndex(Double(index))
             }
         }
-        .frame(width: 56, height: 56)
+        .frame(width: iconSize + stackOffset * CGFloat(max(images.count - 1, 0)),
+               height: iconSize + stackOffset * CGFloat(max(images.count - 1, 0)))
     }
 
     /// 胶囊式数量角标（完全在卡片内部，不向外偏移避免被裁剪）
@@ -176,6 +178,16 @@ struct NestGroupCardView: View {
         let renderer = ImageRenderer(content: content)
         renderer.scale = NSScreen.main?.backingScaleFactor ?? 2.0
         return renderer.nsImage ?? members.first?.icon ?? NSImage()
+    }
+}
+
+// MARK: - Equatable（值差分短路，避免无变化的重绘）
+
+extension NestGroupCardView: Equatable {
+    static func == (lhs: NestGroupCardView, rhs: NestGroupCardView) -> Bool {
+        lhs.groupID == rhs.groupID &&
+        lhs.members.count == rhs.members.count &&
+        lhs.members.map(\.id) == rhs.members.map(\.id)
     }
 }
 

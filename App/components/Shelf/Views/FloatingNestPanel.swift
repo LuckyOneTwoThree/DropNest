@@ -95,6 +95,13 @@ final class FloatingNestPanel: NSPanel {
         startKeyMonitor()
     }
 
+    /// 在已设好的 frame 位置入场（用于记忆位置路径）
+    @MainActor func showAtCurrentFrame() {
+        orderFrontRegardless()
+        makeKey()
+        startKeyMonitor()
+    }
+
     @MainActor func hide() {
         stopKeyMonitor()
         orderOut(nil)
@@ -203,20 +210,20 @@ private struct FloatingNestRootView: View {
     @State private var cachedDragPreview: NSImage?
 
     var body: some View {
-        Group {
+        let members = tvm.items(inGroup: groupID)
+        return Group {
             if isGhost {
                 ghostIndicator
             } else {
-                nestCard
+                nestCard(members: members)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity) // 让内容居中，区域外透明
         .onAppear {
             withAnimation(.nestSpring) { appear = true }
         }
-        .task(id: tvm.items(inGroup: groupID).map(\.id)) {
+        .task(id: members.map(\.id)) {
             // 预渲染整体拖出预览图，避免拖拽瞬间卡顿
-            let members = tvm.items(inGroup: groupID)
             guard !members.isEmpty else { return }
             cachedDragPreview = renderNestDragPreview(members: members)
         }
@@ -276,9 +283,8 @@ private struct FloatingNestRootView: View {
 
     // MARK: - 正式巢
 
-    private var nestCard: some View {
-        let members = tvm.items(inGroup: groupID)
-        return VStack(spacing: 0) {
+    private func nestCard(members: [ShelfItem]) -> some View {
+        VStack(spacing: 0) {
             // 精炼顶栏：tray 图标+数量 = 整体拖出抓手，按钮区 = 收起/删除，其余空白 = 移动窗口
             HStack(spacing: 6) {
                 // 整体拖出抓手（带浅色背景提示，面积足够大）

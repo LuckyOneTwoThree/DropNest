@@ -163,11 +163,12 @@ final class FloatingNestManager {
 
     /// 一键收起全部桌面巢（集合保留在刘海 Shelf）
     func dockAll() {
-        for (gid, panel) in panels {
+        let snapshot = panels
+        panels.removeAll()
+        for (gid, panel) in snapshot {
             savePosition(for: gid, panel: panel)
             panel.hide()
         }
-        panels.removeAll()
     }
 
     /// 切换单个集合的桌面巢展开/收起状态
@@ -205,17 +206,18 @@ final class FloatingNestManager {
 
     /// 删除集合：移除组内全部条目并关闭对应桌面巢
     func deleteGroup(_ groupID: UUID) {
-        // 先关闭面板
         if let panel = panels[groupID] {
             panel.hide()
             panels.removeValue(forKey: groupID)
         }
-        // 清除位置记忆
-        var positions = Defaults[.nestPositions]
-        positions.removeValue(forKey: groupID.uuidString)
-        Defaults[.nestPositions] = positions
-        // 删除组内全部条目
-        ShelfStateViewModel.shared.deleteGroup(groupID)
+        // 数据清理（Defaults 写入 + items 移除触发 SwiftUI 重绘 + 临时文件删除）
+        // 推迟到下一个 runloop，避免阻塞 panel 关闭的视觉渲染
+        Task { @MainActor in
+            var positions = Defaults[.nestPositions]
+            positions.removeValue(forKey: groupID.uuidString)
+            Defaults[.nestPositions] = positions
+            ShelfStateViewModel.shared.deleteGroup(groupID)
+        }
     }
 
     // MARK: - 位置记忆
@@ -235,11 +237,10 @@ final class FloatingNestManager {
         panel.setContentSize(size)
         panel.invalidateShadow()
 
-        // 还原记忆位置，否则默认指针附近
+        // 还原记忆位置，否则默认指针附近；两条路径都走入场动画
         if let saved = loadPosition(for: groupID) {
             panel.setFrameOrigin(saved)
-            panel.orderFrontRegardless()
-            panel.makeKey()
+            panel.showAtCurrentFrame()
         } else {
             let p = point ?? NSEvent.mouseLocation
             panel.show(at: p)

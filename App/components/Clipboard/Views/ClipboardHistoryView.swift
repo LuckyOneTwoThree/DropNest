@@ -23,6 +23,18 @@ struct ClipboardHistoryView: View {
             content
         }
         .quickLookPresenter(using: quickLookService)
+        .onAppear {
+            cvm.refreshDisplayedItems(from: store.items)
+        }
+        .onReceive(store.$items) { _ in
+            // `store.$items` emits during willSet, before the new array is set.
+            // Hop to the next runloop turn so `store.items` reflects the mutated
+            // array when refreshing. Search-text changes are handled synchronously
+            // via `searchText.didSet`, so this only covers store mutations.
+            Task { @MainActor in
+                cvm.refreshDisplayedItems(from: store.items)
+            }
+        }
     }
 
     private var searchBar: some View {
@@ -93,7 +105,7 @@ struct ClipboardHistoryView: View {
 
     @ViewBuilder
     private var content: some View {
-        let displayed = cvm.displayedItems(from: store.items)
+        let displayed = cvm.cachedDisplayedItems
         if store.items.isEmpty {
             emptyState(icon: "clipboard", text: "暂无剪贴板历史", hint: "复制的文本、图片和文件会出现在这里")
         } else if displayed.isEmpty {

@@ -13,16 +13,23 @@ import UniformTypeIdentifiers
 actor ThumbnailService {
     static let shared = ThumbnailService()
 
-    private var cache: [String: NSImage] = [:]
+    private let cache: NSCache<NSString, NSImage> = {
+        let cache = NSCache<NSString, NSImage>()
+        cache.countLimit = 100
+        cache.totalCostLimit = 256 * 1024 * 1024 // 256MB
+        return cache
+    }()
+    /// NSCache 不支持按前缀枚举键，故并行维护一份键集合以实现 clearCache(for:)。
+    private var cacheKeys: Set<String> = []
     private var pendingRequests: [String: Task<NSImage?, Never>] = [:]
     private let thumbnailGenerator = QLThumbnailGenerator.shared
 
     private init() {}
     
     func thumbnail(for url: URL, size: CGSize) async -> NSImage? {
-        let cacheKey = "\(url.path)_\(size.width)x\(size.height)"
+        let cacheKey = makeCacheKey(for: url, size: size)
         
-        if let cached = cache[cacheKey] {
+        if let cached = cache.object(forKey: cacheKey as NSString) {
             return cached
         }
         
@@ -33,7 +40,9 @@ actor ThumbnailService {
         let task = Task<NSImage?, Never> {
             let thumbnail = await generateQuickLookThumbnail(for: url, size: size)
             if let thumbnail = thumbnail {
-                cache[cacheKey] = thumbnail
+                let cost = Int(thumbnail.size.width * thumbnail.size.height) * 4
+                cache.setObject(thumbnail, forKey: cacheKey as NSString, cost: cost)
+                cacheKeys.insert(cacheKey)
             }
             pendingRequests[cacheKey] = nil
             return thumbnail
@@ -44,20 +53,36 @@ actor ThumbnailService {
     }
     
     func clearCache() {
-        cache.removeAll()
+        cache.removeAllObjects()
+        cacheKeys.removeAll()
     }
     
     func clearCache(for url: URL) {
-        cache = cache.filter { !$0.key.starts(with: url.path) }
+        let prefix = url.path
+        let toRemove = cacheKeys.filter { $0.hasPrefix(prefix) }
+        for key in toRemove {
+            cache.removeObject(forKey: key as NSString)
+        }
+        cacheKeys.subtract(toRemove)
     }
     
     // MARK: - Private Methods
+
+    private func makeCacheKey(for url: URL, size: CGSize) -> String {
+        let modificationDate: String
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+           let date = attrs[.modificationDate] as? Date {
+            modificationDate = "\(date.timeIntervalSince1970)"
+        } else {
+            modificationDate = "unknown"
+        }
+        return "\(url.path)|\(size.width)x\(size.height)|\(modificationDate)"
+    }
     
     private func generateQuickLookThumbnail(for url: URL, size: CGSize) async -> NSImage? {
         let scale = await MainActor.run { NSScreen.main?.backingScaleFactor ?? 2.0 }
         
         return await url.accessSecurityScopedResource { scopedURL in
-            NSLog("🔐 ThumbnailService: obtaining security scope for \(scopedURL.path)")
             let request = QLThumbnailGenerator.Request(
                 fileAt: scopedURL,
                 size: size,
@@ -67,14 +92,10 @@ actor ThumbnailService {
             request.iconMode = true
 
             return await withCheckedContinuation { (continuation: CheckedContinuation<NSImage?, Never>) in
-                thumbnailGenerator.generateBestRepresentation(for: request) { representation, error in
+                thumbnailGenerator.generateBestRepresentation(for: request) { representation, _ in
                     if let rep = representation {
-                        NSLog("🔍 ThumbnailService: generated thumbnail for \(scopedURL.path)")
                         continuation.resume(returning: rep.nsImage)
                     } else {
-                        if let err = error { 
-                            NSLog("⚠️ ThumbnailService: thumbnail error for \(scopedURL.path): \(err.localizedDescription)") 
-                        }
                         continuation.resume(returning: nil)
                     }
                 }

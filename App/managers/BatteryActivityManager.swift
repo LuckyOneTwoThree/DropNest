@@ -3,6 +3,7 @@ import IOKit.ps
 
 /// 电池状态监听器，基于 IOKit 监听电源/电量/充电/低功耗/充满时间/最大容量的变化。
 /// 沙盒内可用，无需额外权限。
+@MainActor
 class BatteryActivityManager {
 
     static let shared = BatteryActivityManager()
@@ -15,7 +16,7 @@ class BatteryActivityManager {
     var onTimeToFullChargeChange: ((Int) -> Void)?
 
     private var batterySource: CFRunLoopSource?
-    private var observers: [UUID: (BatteryEvent) -> Void] = [:]
+    private var observers: [UUID: @MainActor (BatteryEvent) -> Void] = [:]
     private var previousBatteryInfo: BatteryInfo?
     private var notificationQueue: [BatteryEvent] = []
     private var isProcessingNotifications = false
@@ -69,7 +70,11 @@ class BatteryActivityManager {
         guard let powerSource = IOPSNotificationCreateRunLoopSource({ context in
             guard let context = context else { return }
             let manager = Unmanaged<BatteryActivityManager>.fromOpaque(context).takeUnretainedValue()
-            manager.notifyBatteryChanges()
+            // IOPS 回调在 RunLoop 线程触发（此处挂在 MainActor 的主 RunLoop），但 C 回调
+            // 本身是 nonisolated，notifyBatteryChanges 是 @MainActor 隔离方法，需跳主线程。
+            Task { @MainActor in
+                manager.notifyBatteryChanges()
+            }
         }, Unmanaged.passUnretained(self).toOpaque())?.takeRetainedValue() else {
             return
         }
@@ -142,16 +147,13 @@ class BatteryActivityManager {
 
         previousBatteryInfo = batteryInfo
 
-        // 触发可选闭包回调
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.onBatteryLevelChange?(batteryInfo.currentCapacity)
-            self.onPowerSourceChange?(batteryInfo.isPluggedIn)
-            self.onChargingChange?(batteryInfo.isCharging)
-            self.onPowerModeChange?(batteryInfo.isInLowPowerMode)
-            self.onTimeToFullChargeChange?(batteryInfo.timeToFullCharge)
-            self.onMaxCapacityChange?(batteryInfo.maxCapacity)
-        }
+        // 触发可选闭包回调（类已 @MainActor，本方法已在主线程）。
+        onBatteryLevelChange?(batteryInfo.currentCapacity)
+        onPowerSourceChange?(batteryInfo.isPluggedIn)
+        onChargingChange?(batteryInfo.isCharging)
+        onPowerModeChange?(batteryInfo.isInLowPowerMode)
+        onTimeToFullChargeChange?(batteryInfo.timeToFullCharge)
+        onMaxCapacityChange?(batteryInfo.maxCapacity)
     }
 
     private func enqueueNotification(_ event: BatteryEvent) {
@@ -165,7 +167,9 @@ class BatteryActivityManager {
         isProcessingNotifications = true
 
         let event = notificationQueue.removeFirst()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+        // 类已 @MainActor，Task 继承 MainActor 隔离，可直接访问隔离状态。
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1.0))
             guard let self = self else { return }
             self.notifyObservers(event: event)
             self.isProcessingNotifications = false
@@ -258,7 +262,7 @@ class BatteryActivityManager {
 
     /// 添加观察者，返回稳定 UUID 标识符用于后续移除。
     /// 注意：不可用数组索引作为 ID——remove(at:) 会导致后续索引前移失效。
-    func addObserver(_ observer: @escaping (BatteryEvent) -> Void) -> UUID {
+    func addObserver(_ observer: @escaping @MainActor (BatteryEvent) -> Void) -> UUID {
         let id = UUID()
         observers[id] = observer
         return id
@@ -270,16 +274,16 @@ class BatteryActivityManager {
     }
 
     private func notifyObservers(event: BatteryEvent) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            for observer in self.observers.values {
-                observer(event)
-            }
+        // 类已 @MainActor，本方法已在主线程；观察者闭包也是 @MainActor 隔离。
+        for observer in observers.values {
+            observer(event)
         }
     }
 
     deinit {
-        stopMonitoring()
+        // BatteryActivityManager 为单例（shared），deinit 不会触发；stopMonitoring()
+        // 依赖 @MainActor 隔离的 batterySource，无法在 nonisolated deinit 中调用。
+        // 单例生命周期内 RunLoop source 始终存活，无需手动移除。
         NotificationCenter.default.removeObserver(self)
     }
 

@@ -11,12 +11,9 @@ final class XPCHelperClient: NSObject {
     private let serviceName = "com.dropnest.app.DropNestXPCHelper"
 
     private var connection: NSXPCConnection?
-    private var lastKnownAuthorization: Bool?
-    private var monitoringTask: Task<Void, Never>?
 
     deinit {
         connection?.invalidate()
-        stopMonitoringAccessibilityAuthorization()
     }
 
     // MARK: - Connection Management
@@ -50,90 +47,6 @@ final class XPCHelperClient: NSObject {
     @MainActor
     private func getProxyWithError(errorHandler: @escaping (Error) -> Void) -> DropNestXPCHelperProtocol? {
         ensureConnection().remoteObjectProxyWithErrorHandler(errorHandler) as? DropNestXPCHelperProtocol
-    }
-
-    @MainActor
-    private func notifyAuthorizationChange(_ granted: Bool) {
-        guard lastKnownAuthorization != granted else { return }
-        lastKnownAuthorization = granted
-        NotificationCenter.default.post(
-            name: .accessibilityAuthorizationChanged,
-            object: nil,
-            userInfo: ["granted": granted]
-        )
-    }
-
-    // MARK: - Monitoring
-
-    nonisolated func startMonitoringAccessibilityAuthorization(every interval: TimeInterval = 3.0) {
-        stopMonitoringAccessibilityAuthorization()
-        monitoringTask = Task.detached { [weak self] in
-            guard let self = self else { return }
-            while !Task.isCancelled {
-                _ = await self.isAccessibilityAuthorized()
-                do {
-                    try await Task.sleep(for: .seconds(interval))
-                } catch { break }
-            }
-        }
-    }
-
-    nonisolated func stopMonitoringAccessibilityAuthorization() {
-        monitoringTask?.cancel()
-        monitoringTask = nil
-    }
-
-    var isMonitoring: Bool {
-        return monitoringTask != nil
-    }
-
-    // MARK: - Accessibility
-
-    nonisolated func requestAccessibilityAuthorization() {
-        Task { @MainActor in
-            guard let proxy = getProxyWithError(errorHandler: { _ in }) else { return }
-            proxy.requestAccessibilityAuthorization()
-        }
-    }
-
-    nonisolated func isAccessibilityAuthorized() async -> Bool {
-        await withCheckedContinuation { continuation in
-            Task { @MainActor in
-                let proxy = self.getProxyWithError { _ in
-                    continuation.resume(returning: false)
-                }
-                guard let proxy else {
-                    continuation.resume(returning: false)
-                    return
-                }
-                proxy.isAccessibilityAuthorized { authorized in
-                    Task { @MainActor in
-                        self.notifyAuthorizationChange(authorized)
-                    }
-                    continuation.resume(returning: authorized)
-                }
-            }
-        }
-    }
-
-    nonisolated func ensureAccessibilityAuthorization(promptIfNeeded: Bool) async -> Bool {
-        await withCheckedContinuation { continuation in
-            Task { @MainActor in
-                let proxy = self.getProxyWithError { _ in
-                    continuation.resume(returning: false)
-                }
-                guard let proxy else {
-                    continuation.resume(returning: false)
-                    return
-                }
-                proxy.ensureAccessibilityAuthorization(promptIfNeeded) { authorized in
-                    Task { @MainActor in
-                        self.notifyAuthorizationChange(authorized)
-                    }
-                    continuation.resume(returning: authorized)
-                }
-            }
-        }
     }
 
     // MARK: - Keyboard Brightness

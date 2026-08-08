@@ -36,15 +36,8 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
     deinit {
         streamTask?.cancel()
 
-        if let pipeHandler = self.pipeHandler {
-            Task { await pipeHandler.close() }
-        }
-
-        if let process = self.process {
-            if process.isRunning {
-                process.terminate()
-                process.waitUntilExit()
-            }
+        if let process = self.process, process.isRunning {
+            process.terminate()
         }
 
         self.process = nil
@@ -144,7 +137,7 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
             (diff ? self.playbackState.bundleIdentifier : "")
         )
 
-        self.playbackState = newPlaybackState
+        await MainActor.run { self.playbackState = newPlaybackState }
     }
 }
 

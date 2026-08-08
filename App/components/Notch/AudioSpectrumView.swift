@@ -27,6 +27,11 @@ class AudioSpectrum: NSView {
         setupBars()
     }
 
+    deinit {
+        animationTimer?.invalidate()
+        animationTimer = nil
+    }
+
     private func setupBars() {
         let barWidth: CGFloat = 2
         let barCount = 4
@@ -59,6 +64,9 @@ class AudioSpectrum: NSView {
         guard animationTimer == nil else { return }
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
             self?.updateBars()
+        }
+        if let timer = animationTimer {
+            RunLoop.main.add(timer, forMode: .common)
         }
     }
 

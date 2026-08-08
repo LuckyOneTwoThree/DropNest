@@ -15,6 +15,7 @@ let defaultImage: NSImage = .init(
     accessibilityDescription: "Album Art"
 )!
 
+@MainActor
 class MusicManager: ObservableObject {
     // MARK: - Properties
     static let shared = MusicManager()
@@ -48,7 +49,7 @@ class MusicManager: ObservableObject {
     private var lastArtworkBundleIdentifier: String? = nil
 
     @Published var isFlipping: Bool = false
-    private var flipWorkItem: DispatchWorkItem?
+    private var flipTask: Task<Void, Never>?
 
     // MARK: - Initialization
     init() {
@@ -67,15 +68,14 @@ class MusicManager: ObservableObject {
         }
     }
 
-    deinit {
-        destroy()
-    }
-
+    /// MusicManager 为单例（shared），deinit 不会触发；显式清理请调用 destroy()
+    /// （在 @MainActor 上下文，如 applicationWillTerminate）。deinit 是 nonisolated，
+    /// 无法访问 @MainActor 隔离的 cancellables / activeController 等属性。
     public func destroy() {
         debounceIdleTask?.cancel()
         cancellables.removeAll()
         controllerCancellables.removeAll()
-        flipWorkItem?.cancel()
+        flipTask?.cancel()
 
         // Release active controller
         activeController = nil
@@ -96,9 +96,9 @@ class MusicManager: ObservableObject {
         controller.playbackStatePublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
-                guard let self = self,
-                      self.activeController === controller else { return }
                 Task { @MainActor in
+                    guard let self = self,
+                          self.activeController === controller else { return }
                     self.updateFromPlaybackState(state)
                 }
             }
@@ -172,29 +172,23 @@ class MusicManager: ObservableObject {
 
     private func triggerFlipAnimation() {
         // Cancel any existing animation
-        flipWorkItem?.cancel()
+        flipTask?.cancel()
 
-        // Create a new animation
-        let workItem = DispatchWorkItem { [weak self] in
+        // Task 继承 MainActor 隔离，可直接访问 @Published 的 isFlipping。
+        flipTask = Task { [weak self] in
             self?.isFlipping = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                self?.isFlipping = false
-            }
+            try? await Task.sleep(for: .milliseconds(200))
+            if Task.isCancelled { return }
+            self?.isFlipping = false
         }
-
-        flipWorkItem = workItem
-        DispatchQueue.main.async(execute: workItem)
     }
 
     private func updateArtwork(_ artworkData: Data) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-
-            if let artworkImage = NSImage(data: artworkData) {
-                DispatchQueue.main.async { [weak self] in
-                    self?.updateAlbumArt(newAlbumArt: artworkImage)
-                }
-            }
+        // 解码在后台进行，回 MainActor 更新 UI（外层 Task 继承 MainActor 隔离）。
+        Task { [weak self] in
+            let image = await Task.detached(priority: .userInitiated) { NSImage(data: artworkData) }.value
+            guard let self = self, let image else { return }
+            self.updateAlbumArt(newAlbumArt: image)
         }
     }
 
@@ -228,7 +222,7 @@ class MusicManager: ObservableObject {
 
     func calculateAverageColor() {
         albumArt.averageColor { [weak self] color in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 withAnimation(.smooth) {
                     self?.avgColor = color ?? .white
                 }

@@ -49,7 +49,7 @@ struct ShelfItemView: View {
                     viewModel: viewModel,
                     cachedPreviewImage: $cachedPreviewImage,
                     dragPreviewContent: {
-                        DragPreviewView(thumbnail: viewModel.thumbnail ?? item.icon, displayName: item.displayName)
+                        DragPreviewView(thumbnail: viewModel.thumbnail ?? viewModel.cachedFallbackIcon ?? NSImage(), displayName: viewModel.cachedDisplayName)
                     },
                     onRightClick: viewModel.handleRightClick,
                     onClick: { event, nsview in
@@ -95,7 +95,7 @@ struct ShelfItemView: View {
     // MARK: - View Components
 
     private var iconView: some View {
-        Image(nsImage: viewModel.thumbnail ?? item.icon)
+        Image(nsImage: viewModel.thumbnail ?? viewModel.cachedFallbackIcon ?? NSImage())
             .resizable()
             .aspectRatio(contentMode: .fit)
             .frame(width: 56, height: 56)
@@ -104,7 +104,7 @@ struct ShelfItemView: View {
     }
 
     private var textView: some View {
-        Text(item.displayName)
+        Text(viewModel.cachedDisplayName)
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(.primary)
             .lineLimit(2)
@@ -159,13 +159,24 @@ struct ShelfItemView: View {
     
     @MainActor
     private func renderDragPreview() async -> NSImage {
-        let content = DragPreviewView(thumbnail: viewModel.thumbnail ?? item.icon, displayName: item.displayName)
+        let content = DragPreviewView(thumbnail: viewModel.thumbnail ?? viewModel.cachedFallbackIcon ?? NSImage(), displayName: viewModel.cachedDisplayName)
         let renderer = ImageRenderer(content: content)
         renderer.scale = NSScreen.main?.backingScaleFactor ?? 2.0
-        return renderer.nsImage ?? (viewModel.thumbnail ?? item.icon)
+        return renderer.nsImage ?? (viewModel.thumbnail ?? viewModel.cachedFallbackIcon ?? NSImage())
     }
 
-    
+
+}
+
+// MARK: - Equatable（值差分短路，避免无变化的重绘）
+
+extension ShelfItemView: Equatable {
+    static func == (lhs: ShelfItemView, rhs: ShelfItemView) -> Bool {
+        lhs.item.id == rhs.item.id &&
+        lhs.viewModel.cachedDisplayName == rhs.viewModel.cachedDisplayName &&
+        (lhs.viewModel.thumbnail != nil) == (rhs.viewModel.thumbnail != nil) &&
+        lhs.viewModel.isSelected == rhs.viewModel.isSelected
+    }
 }
 
 // MARK: - Shared drag payload assembly
@@ -247,7 +258,7 @@ private struct DraggableClickHandler<Content: View>: NSViewRepresentable {
         }
         
         // Fallback to icon if rendering fails
-        return viewModel.thumbnail ?? item.icon
+        return viewModel.thumbnail ?? viewModel.cachedFallbackIcon ?? NSImage()
     }
     
     final class DraggableClickView: NSView, NSDraggingSource {

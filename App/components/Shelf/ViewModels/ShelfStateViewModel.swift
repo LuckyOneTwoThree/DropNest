@@ -100,7 +100,12 @@ final class ShelfStateViewModel: ObservableObject {
         expandedGroupIDs.remove(groupID)
         let toRemove = items.filter { $0.groupID == groupID }
         items.removeAll { $0.groupID == groupID }
-        toRemove.forEach { $0.cleanupStoredData() }
+        // 临时文件清理（IO）放到后台线程，避免阻塞主线程渲染
+        Task.detached(priority: .utility) {
+            for item in toRemove {
+                item.cleanupStoredData()
+            }
+        }
         // deleteGroup 由 FloatingNestManager.deleteGroup 调用，面板已在那里关闭
     }
 
@@ -134,9 +139,12 @@ final class ShelfStateViewModel: ObservableObject {
     }
 
     func remove(_ item: ShelfItem) {
-        item.cleanupStoredData()
         let removedGroupID = item.groupID
         items.removeAll { $0.id == item.id }
+        // 临时文件清理（IO）放到后台线程，避免阻塞主线程渲染
+        Task.detached(priority: .utility) {
+            item.cleanupStoredData()
+        }
         // 删除后若所属组已空，关闭对应桌面巢（避免残留"载入中"空巢）
         if let gid = removedGroupID, !items.contains(where: { $0.groupID == gid }) {
             expandedGroupIDs.remove(gid)
@@ -149,7 +157,12 @@ final class ShelfStateViewModel: ObservableObject {
     func clearAll() {
         let removed = items
         items = []
-        removed.forEach { $0.cleanupStoredData() }
+        // 临时文件清理（IO）放到后台线程，避免阻塞主线程渲染
+        Task.detached(priority: .utility) {
+            for item in removed {
+                item.cleanupStoredData()
+            }
+        }
         // 清空文件架时同步关闭所有桌面悬浮巢（否则巢会一直显示"载入中"）
         Task { @MainActor in
             FloatingNestManager.shared.dockAll()
