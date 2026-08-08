@@ -5,54 +5,132 @@
 <h1 align="center">DropNest 🪺</h1>
 
 <p align="center">
-  把 MacBook 的刘海变成一块实用的悬浮面板：拖文件暂存，看正在播放的音乐。
+  把 MacBook 的刘海变成你的「第二桌面」。<br/>
+  文件暂存 · 悬浮巢群 · 剪贴板历史 · 媒体控制 · 系统 HUD —— 一切尽在刘海上方。
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License"></a>
   <img src="https://img.shields.io/badge/platform-macOS%2014%2B-black" alt="Platform">
   <img src="https://img.shields.io/badge/Swift-5.0-FA7343" alt="Swift">
-  <img src="https://img.shields.io/badge/version-2.7.3-green" alt="Version">
+  <img src="https://img.shields.io/badge/version-3.0-green" alt="Version">
 </p>
 
 > ⚠️ **许可证**：本项目派生自 [boring.notch](https://github.com/TheBoredTeam/boring.notch)（GPL-3.0）。依据 GPL「衍生作品」条款，DropNest 同样以 **GPL-3.0** 发布，必须保留原许可证与版权信息。详见 [`LICENSE`](LICENSE) 与 [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES)。
 
 ---
 
-## 功能特性
+## 核心功能
 
-### 刘海媒体条（Now Playing）
+### 🪺 悬浮暂存巢群（Floating Nest）
 
-- 当系统正在播放音乐时，刘海区域两侧展开，显示**专辑封面**与**动态频谱动画**。
-- 暂停 / 停止后自动收起为细条，不遮挡屏幕内容。
-- 通过系统级媒体接口获取播放状态，**支持任意播放器**（Apple Music、Spotify、网页播放器等），不依赖单一 App。
+把文件暂存从刘海延伸到整个桌面。每个集合都可以独立展开为悬浮巢，拖拽、收纳、流转一气呵成。
 
-### 文件暂存（Shelf）
+- **空巢胚落点**：拖拽文件时，鼠标附近自动浮现一个紧凑胶囊式落点指示器，松手即孵化为正式巢 —— 像在桌面上「种」一个文件巢。
+- **摇晃召唤**：拖拽过程中横向摇晃鼠标，指针附近瞬间召唤一个空巢胚。纯指针驱动，无需键盘快捷键。
+- **集合巢群**：批量拖入的文件自动成组，每个集合可独立展开为桌面悬浮巢，位置记忆、随用随调。
+- **三层手势分离**：
+  - **拖标题栏** → 移动窗口位置
+  - **拖空白区** → 整体拖出全部文件（Finder 标准复制/移动语义）
+  - **拖单个条目** → 只拖出该文件
+- **一键流转**：全部集合一键展开为桌面巢群，或一键收回刘海，集合数据始终保留在文件架中。
 
-把文件拖到刘海区域即可「钉」在刘海上，随时取用，相当于一个悬浮的临时收纳区：
+### 📦 文件架（Shelf）
 
-- **拖入即收**：文件拖到刘海上方自动展开收纳，松开后收入面板。
-- **安全书签持久化**：使用系统安全范围书签（security-scoped bookmark），**重启应用后文件引用不丢失**。
-- **单项右键菜单**：打开 / 用其他应用打开 / 在访达中显示 / 快速查看（Quick Look）/ 分享 / 复制 / 重命名 / 移除。
-- **图片专属操作**：移除背景（抠图）/ 转换图片格式 / 创建 PDF。
-- **文件夹操作**：可直接压缩为 zip。
-- 每项均有缩略图预览。
+刘海里的悬浮收纳区，拖入即收，随时取用。
 
-### 交互方式
+- **拖入即收**：文件/文件夹/文本/链接拖到刘海区域自动展开收纳。
+- **安全书签持久化**：使用 security-scoped bookmark，重启后文件引用不丢失。
+- **集合管理**：多个文件可编组为集合，集合卡片显示数量角标，支持就地展开、解散、删除。
+- **复制 vs 移动**：默认拖出为复制（保留原文件）；可在设置中关闭以切换为移动语义。
+- **丰富右键菜单**：打开 / 快速查看 / 访达中显示 / 分享 / 复制 / 重命名 / 移除。
+- **图片处理**：移除背景（抠图）/ 转换图片格式 / 创建 PDF。
+- **文件夹操作**：右键直接压缩为 zip。
 
-- **悬停展开**：鼠标移到刘海上方自动展开面板。
-- **双指手势开合**：触控板双指开合控制面板展开 / 收起。
-- **拖拽检测区域可调**：可在设置中调整刘海拖拽感应区域的大小与灵敏度。
+### 📋 剪贴板历史（Clipboard）
 
-### 设置
+刘海里的剪贴板管理器，记录每一次复制，随时回贴。
 
-提供独立的设置窗口（通用 / 外观 / 媒体 / 文件架 / 关于 等分页），可微调刘海行为、外观、媒体显示与 Shelf 相关选项，并支持**登录时自动启动**。
+- **多类型 payload**：同一次复制中的文本、RTF、HTML、图片、文件 URL 全部保存，回贴时行为与原始一致。
+- **全局快速面板**：按 `⌃⌥V` 在鼠标位置唤出快速面板，输入过滤、方向键选择、回车回贴，全程不离开键盘。
+- **可选自动粘贴**：回贴后自动注入 `⌘V` 到当前应用（需辅助功能权限）。
+- **隐私红线**：自动识别密码管理器的一次性内容、文件承诺类型，可配置忽略应用列表。
+- **容量与时效**：可设置最大条目数、保留天数、是否保存图片/文件、最大条目体积。
 
-### 与原版（boring.notch）的功能范围差异
+### 🎵 媒体条（Now Playing）
 
-> 出于个人使用场景的取舍，DropNest 未包含原 boring.notch 中的以下模块：
-> 日历 / 提醒事项、电池指示、摄像头镜像、系统 HUD 替换、下载指示器、歌词与可视化器、自动更新、Onboarding 引导等。
-> 这些能力在原项目中同样完善，仅是本个人分支未纳入，以让体量更精简、更聚焦于核心场景。
+刘海两侧展开，显示专辑封面与动态频谱。
+
+- 支持任意播放器（Apple Music、Spotify、网页播放器等），通过系统级媒体接口获取状态。
+- 暂停后自动收起为细条，不遮挡屏幕内容。
+- 智能标签页切换：根据最近活动（文件暂存 / 剪贴板复制）自动切换默认标签页。
+
+### 🎛️ 系统 HUD 替换
+
+用刘海 HUD 替代系统原生音量/亮度/键盘背光指示器。
+
+- **三类独立开关**：音量、屏幕亮度、键盘背光各自独立控制，可混用「刘海 HUD + 原生 bezel」。
+- **多种显示样式**：折叠态内联 HUD（刘海两侧）/ 展开态可拖动进度条 / 刘海下方进度条。
+- **Option 键增强**：按住 Option + 媒体键可自定义行为（打开设置 / 显示 HUD / 无操作）。
+- **CGEvent Tap 拦截**：精准拦截媒体键事件，抑制系统原生 bezel，需辅助功能权限（运行时授予）。
+
+### 🔋 电池指示
+
+刘海内的电量条，颜色随状态变化。
+
+- 低电量红色 / 低功耗黄色 / 充电绿色 / 常态白色。
+- 可显示电量百分比、充电/插电图标。
+- 低电量通知（20% 阈值，一次性触发）。
+
+---
+
+## 交互方式
+
+| 操作 | 效果 |
+|------|------|
+| 鼠标悬停刘海 | 自动展开面板 |
+| 触控板双指开合 | 控制面板展开 / 收起 |
+| 拖文件到刘海 | 展开文件架并收纳 |
+| 拖拽中摇晃鼠标 | 召唤空巢胚到指针附近 |
+| `⌃⌥V` | 唤起剪贴板快速面板 |
+| 媒体键 | 音量/亮度/键盘背光调节 + HUD |
+| `Esc` | 关闭悬浮巢 / 快速面板 |
+
+所有交互的感应区域、灵敏度、动画时长均可在设置中微调。
+
+---
+
+## 架构亮点
+
+### XPC Helper 架构
+
+主 App 保持沙盒化，通过独立 XPC Helper（非沙盒）调用需要特权的能力：
+
+- **屏幕亮度**：DisplayServices + IOKit 私有 API
+- **键盘背光**：CoreBrightness 私有框架（动态加载 `KeyboardBrightnessClient`）
+- **辅助功能授权**：XPC 侧检查并请求辅助功能权限
+
+XPC 通信使用 `withCheckedContinuation` 包装为 async/await，带错误处理避免永久挂起。
+
+### 窗口体系
+
+- 基于 [SkyLightWindow](https://github.com/Lakr233/SkyLightWindow) 创建贴合刘海形状的无边框窗口，跨 Space 显示。
+- 悬浮巢使用独立 NSPanel 体系，与刘海窗口完全隔离，不进 NotchSpaceManager。
+- 多显示器支持：自动检测并适配每个屏幕的刘海位置。
+
+### 安全与权限
+
+| 能力 | 机制 | 权限需求 |
+|------|------|---------|
+| 文件暂存 | security-scoped bookmark | 沙盒内，无额外权限 |
+| 音量读写 | CoreAudio | 沙盒内，无额外权限 |
+| 电池监听 | IOKit.ps | 沙盒内，无额外权限 |
+| 媒体键拦截 | CGEvent Tap | 辅助功能权限（运行时授予） |
+| 屏幕亮度 | XPC Helper | 无额外权限（XPC 侧调用） |
+| 剪贴板热键 | Carbon RegisterEventHotKey | 无额外权限 |
+| 自动粘贴 | CGEvent 注入 | 辅助功能权限（可选） |
+
+> DropNest 不需要「完全磁盘访问」等高危权限。文件访问通过安全书签，系统 HUD 通过辅助功能权限（运行时按需授予）。
 
 ---
 
@@ -61,58 +139,35 @@
 | 项目 | 要求 |
 | --- | --- |
 | 操作系统 | macOS 14 Sonoma 或更高 |
-| 芯片 | Apple Silicon 或 Intel Mac 均可 |
-| 构建工具 | Xcode 15 及以上（需支持 Swift 严格并发与下文所列 SPM 依赖） |
+| 芯片 | Apple Silicon 或 Intel Mac |
+| 构建工具 | Xcode 15+（需支持 Swift 严格并发） |
 | 运行形态 | 沙盒化 App，无需关闭 SIP |
-
----
-
-## 技术栈与依赖
-
-- **语言 / 框架**：Swift 5（启用严格并发 `SWIFT_STRICT_CONCURRENCY = targeted`）+ SwiftUI。
-- **窗口体系**：基于 [SkyLightWindow](https://github.com/Lakr233/SkyLightWindow) 创建无边框、贴合刘海形状的原生窗口，支持多显示器。
-- **媒体监听**：通过 [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter)（Perl 脚本 + `MediaRemoteAdapter.framework` 子进程）流式获取系统级 Now Playing 状态。
-- **偏好存储**：[Defaults](https://github.com/sindresorhus/Defaults)。
-- **登录启动**：[LaunchAtLogin-Modern](https://github.com/sindresorhus/LaunchAtLogin-Modern)。
-- **Swift 语法支持**：[swift-syntax](https://github.com/swiftlang/swift-syntax)。
-- **包管理**：Xcode 内置 Swift Package Manager（SPM）。
-- **DMG 打包**：`dmgbuild`（Python，见 `Configuration/dmg`）。
 
 ---
 
 ## 安装
 
-### 方式一：下载安装包（如有提供）
+### 方式一：下载安装包
 
-若仓库 Release 中提供了 `.dmg`，直接挂载后把 `DropNest.app` 拖入 `应用程序` 文件夹即可。
+若仓库 Release 中提供了 `.dmg`，挂载后把 `DropNest.app` 拖入 `应用程序` 即可。
 
 ### 方式二：从源码构建
 
-见下一节。构建产物 `DropNest.app` 可在 `Products/` 或 Xcode 的 `DerivedData` 中找到，拷到 `应用程序` 即可使用。
+```bash
+# 克隆仓库
+git clone https://github.com/LuckyOneTwoThree/DropNest.git
+cd DropNest
 
----
+# 用 Xcode 打开并构建
+open DropNest.xcodeproj
+# 在 Xcode 中按 ⌘R 运行，或 ⌘B 构建
+```
 
-## 从源码构建
+构建产物 `DropNest.app` 可在 Xcode 的 `Products` 组中右键 → **Show in Finder** 取出。
 
-### 前置要求
-
-- 已安装 **Xcode 15+**（App Store 或 [developer.apple.com](https://developer.apple.com/xcode/)）。
-- 已安装 **Xcode Command Line Tools**：`xcode-select --install`。
-- （仅构建 DMG 时需要）**Python 3**，用于安装 `dmgbuild`。
-
-### 用 Xcode 运行 / 构建（推荐）
-
-1. 双击打开 `DropNest.xcodeproj`。
-2. 在顶部工具栏选择 **DropNest** 作为 Target / Scheme。
-3. 连接一台 Mac（或选择 `My Mac` 作为运行目标）。
-4. 按 **⌘R** 直接运行；或 **⌘B** 仅构建。
-5. 构建完成后，在 Xcode 的 `Products` 组中右键 `DropNest.app` → **Show in Finder** 取出 App。
-
-### 用命令行构建
+### 命令行构建
 
 ```bash
-# 若 Xcode 尚未生成共享 Scheme，可先打开一次 Xcode 触发生成；
-# 之后可用 -scheme；也可直接指定 -target。
 xcodebuild \
   -project DropNest.xcodeproj \
   -scheme DropNest \
@@ -121,138 +176,133 @@ xcodebuild \
   build
 ```
 
-> 提示：仓库未包含共享 Scheme（`.xcschemes`），首次请先通过 Xcode 打开工程以生成本地 Scheme；或直接用 `-target DropNest` 代替 `-scheme DropNest`。
+> 首次请先通过 Xcode 打开工程以生成本地 Scheme。
 
 ### 构建 DMG 安装包
 
-DMG 打包脚本位于 `Configuration/dmg/`：
-
 ```bash
 cd Configuration/dmg
-python3 -m venv .venv && source .venv/bin/activate   # 可选，隔离依赖
-pip install -r requirements.txt                        # 安装 dmgbuild 等
-python3 dmgbuild_settings.py                           # 按配置生成 DMG
-# 或直接运行打包脚本：
-# ./create_dmg.sh
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python3 dmgbuild_settings.py
 ```
-
-生成的 DMG 会包含窗口背景图（`.background/background.tiff`）等定制化元素。
 
 ---
 
-## 使用说明
+## 使用指南
 
 ### 首次启动
 
-1. 从 `应用程序` 文件夹启动 **DropNest**（首次启动可能被 macOS 拦截，见[常见问题](#常见问题)）。
-2. 由于启用了 **App Sandbox**，Shelf 通过「安全范围书签」访问你拖入的文件，无需额外授予「完全磁盘访问」等敏感权限。
-3. 建议在设置中开启「登录时启动」，避免每次手动打开。
+1. 从 `应用程序` 启动 **DropNest**（首次可能被 macOS 拦截，右键 → 打开）。
+2. 建议在设置中开启「登录时启动」。
+3. 如需系统 HUD 替换，在设置中开启后按提示授予辅助功能权限。
 
-### 文件暂存（Shelf）
+### 文件暂存
 
-- **拖入**：把任意文件 / 文件夹拖到屏幕顶部刘海区域，面板自动展开并收纳。
-- **取出**：悬停展开后，单击文件用默认程序打开；右键调出菜单：
-  - 打开 / 用其他应用打开
-  - 在访达中显示
-  - 快速查看（Quick Look 预览）
-  - 分享
-  - 复制 / 重命名 / 移除
-- **图片处理**：选中图片后可「移除背景」「转换图片格式」「创建 PDF」。
-- **文件夹**：右键可直接压缩为 zip。
-- **持久化**：收纳的文件引用会被安全书签记录，重启 DropNest 后依然可用。
+- **拖入**：把文件拖到屏幕顶部刘海区域，面板自动展开并收纳。
+- **批量成组**：一次拖入多个文件自动编为集合。
+- **悬浮巢**：点击集合卡片右键 →「以悬浮巢展示」，或点击顶栏巢群按钮一键展开全部。
+- **取出**：从文件架拖出 = 复制（默认）；从悬浮巢拖空白区 = 整体拖出全部。
+- **持久化**：收纳的文件引用由安全书签记录，重启后依然可用。
 
-### 媒体条
+### 剪贴板历史
 
-- 播放音乐时，刘海两侧出现专辑封面与动态频谱；暂停后自动收起。
-- 媒体显示行为（是否显示封面、频谱等）可在设置「媒体」分页中调整。
+- 在刘海面板切换到「剪贴板」标签页浏览历史。
+- 按 `⌃⌥V` 在任意位置唤出快速面板，输入过滤、方向键选择、回车回贴。
+- 在设置中配置忽略应用、最大条目数、保留天数等。
+
+### 系统 HUD
+
+- 在设置 → HUD 中开启主开关，按需勾选音量/亮度/键盘背光。
+- 按媒体键时刘海显示 HUD，替代系统原生 bezel。
+- 不需要的类别可关闭，按键透传给系统。
 
 ### 设置
 
-打开设置窗口（菜单栏图标或快捷键），分页包括：
+设置窗口包含 8 个分页：
 
-- **通用**：登录启动、基础行为等。
-- **外观**：刘海面板样式相关。
-- **媒体**：Now Playing 显示选项。
-- **文件架**：Shelf 容量、默认操作等。
-- **关于**：版本与许可证信息。
-
----
-
-## 权限与沙盒
-
-DropNest 是**沙盒化应用**，其权限声明见 `App/DropNest.entitlements`：
-
-| 权限 | 用途 |
-| --- | --- |
-| `com.apple.security.app-sandbox` | 启用 App 沙盒，提升安全性 |
-| `com.apple.security.files.bookmarks.app-scope` | Shelf 用 App 级安全书签持久化文件引用 |
-| `com.apple.security.files.bookmarks.document-scope` | Shelf 用文档级安全书签持久化文件引用 |
-| `com.apple.security.files.user-selected.read-write` | 处理用户主动拖入 / 选择的文件 |
-
-> 正因为使用安全范围书签而非请求「完全磁盘访问」，DropNest 不需要你在「系统设置 → 隐私与安全性」里授予任何高危权限。
+| 分页 | 内容 |
+|------|------|
+| 通用 | 登录启动、菜单栏图标、多显示器、屏幕录制隐藏 |
+| 外观 | 刘海样式、阴影、圆角、强调色 |
+| 媒体 | 专辑封面、频谱、展开等待时长 |
+| 文件架 | 容量、复制/移动语义、自动移除、拖拽检测区域 |
+| 剪贴板 | 开关、容量、时效、忽略应用、热键、自动粘贴 |
+| 电池 | 电量条、百分比、充电图标、低电量通知 |
+| HUD | 主开关、音量/亮度/背光独立开关、显示样式、Option 键行为 |
+| 关于 | 版本与许可证 |
 
 ---
 
 ## 目录结构
 
-源码目录名为 **`App/`**（DropNest 的 Swift 源码主目录）：
-
 ```
 DropNest/
-├── App/                     # 源码主目录
-│   ├── DropNestApp.swift            # 应用入口：刘海窗口与拖拽检测管理
-│   ├── ContentView.swift            # 刘海整体布局（收起媒体条 / 展开 Shelf）
-│   ├── NotchViewCoordinator.swift   # 刘海视图协调
-│   ├── DropNest.entitlements        # 沙盒与文件权限声明
-│   ├── Info.plist                   # 应用 Info 配置
-│   ├── Localizable.xcstrings        # 本地化字符串（含中文）
-│   ├── Assets.xcassets/             # 图标与图片资源
+├── App/                              # 主 App 源码
+│   ├── DropNestApp.swift             # @main 入口 + AppDelegate
+│   ├── NotchViewCoordinator.swift    # 刘海视图协调器
+│   ├── DropNest.entitlements         # 沙盒权限声明
 │   ├── components/
-│   │   ├── Notch/                   # 刘海窗口、形状、头部、频谱
-│   │   ├── Shelf/                   # 文件暂存模块
-│   │   │   ├── Models/              # Bookmark、ShelfItem
-│   │   │   ├── Services/            # 拖放/持久化/图片处理/QuickLook/缩略图
-│   │   │   ├── ViewModels/
-│   │   │   └── Views/               # ShelfView、ShelfItemView、DragPreviewView
-│   │   └── Settings/                # 设置界面（SettingsView 等）
-│   ├── managers/                    # MusicManager（Now Playing 监听）等
-│   ├── MediaControllers/            # NowPlayingController（mediaremote-adapter 封装）
-│   ├── observers/                   # DragDetector（刘海拖拽检测）
-│   ├── sizing/                      # 刘海尺寸计算
-│   ├── models/  enums/  extensions/  helpers/  utils/  private/  animations/
-├── mediaremote-adapter/             # 媒体监听子模块（Perl 脚本 + Framework）
-│   ├── MediaRemoteAdapter.framework
-│   ├── MediaRemoteAdapterTestClient
-│   └── mediaremote-adapter.pl
-├── Configuration/
-│   └── dmg/                         # DMG 打包配置（dmgbuild）
-│       ├── create_dmg.sh
-│       ├── dmgbuild_settings.py
-│       ├── requirements.txt
-│       └── .background/background.tiff
-├── DropNest.xcodeproj/              # Xcode 工程
-├── LICENSE                          # GPL-3.0 许可证
-├── THIRD_PARTY_LICENSES             # 第三方依赖许可证汇总
-└── README.md
+│   │   ├── Notch/                    # 刘海窗口、形状、频谱、头部
+│   │   ├── Shelf/                    # 文件架 + 悬浮巢群
+│   │   │   ├── Models/               # ShelfItem、Bookmark
+│   │   │   ├── Services/             # 拖放/持久化/缩略图/图片处理
+│   │   │   ├── ViewModels/           # 状态/选择/加载
+│   │   │   ├── Views/                # ShelfView、FloatingNestPanel、NestGroupCardView
+│   │   │   └── FloatingNestManager.swift
+│   │   ├── Clipboard/                # 剪贴板历史（Models/Services/ViewModels/Views）
+│   │   ├── HUD/                      # 系统 HUD（展开态/折叠态/事件指示器）
+│   │   ├── Battery/                  # 电池指示视图
+│   │   └── Settings/                 # 8 分页设置窗口
+│   ├── managers/                     # Volume/Brightness/Battery/Music/NotchSpace
+│   ├── MediaControllers/             # NowPlaying 抽象层
+│   ├── observers/                    # DragDetector/MediaKeyInterceptor/ShakeGestureDetector
+│   ├── XPCHelperClient/              # XPC 客户端（async/await 封装）
+│   ├── models/                       # Constants、NotchViewModel、BatteryStatusViewModel
+│   └── sizing/ extensions/ helpers/  # 工具
+├── DropNestXPCHelper/                # XPC Helper target（非沙盒）
+│   ├── DropNestXPCHelper.swift       # 亮度/背光/辅助功能授权
+│   └── DropNestXPCHelper.entitlements
+├── mediaremote-adapter/              # 媒体监听子模块
+├── Configuration/dmg/                # DMG 打包配置
+├── DropNestTests/                    # 单元测试
+└── DropNest.xcodeproj/
 ```
 
-> 注：Xcode 工程中 `PRODUCT_NAME` 为 `DropNest`，`MARKETING_VERSION` 为 `2.7.3`，`PRODUCT_BUNDLE_IDENTIFIER` 已独立化为 `com.dropnest.app`（如需换成你自己的反向域名，请在 Xcode 中修改）。
+---
+
+## 技术栈
+
+- **语言**：Swift 5（严格并发 `SWIFT_STRICT_CONCURRENCY = targeted`）+ SwiftUI
+- **窗口**：[SkyLightWindow](https://github.com/Lakr233/SkyLightWindow)（贴合刘海的原生窗口）
+- **媒体**：[mediaremote-adapter](https://github.com/ungive/mediaremote-adapter)（系统级 Now Playing）
+- **偏好**：[Defaults](https://github.com/sindresorhus/Defaults)
+- **登录启动**：[LaunchAtLogin-Modern](https://github.com/sindresorhus/LaunchAtLogin-Modern)
+- **语法**：[swift-syntax](https://github.com/swiftlang/swift-syntax)
+- **特权能力**：XPC Helper 架构（屏幕亮度/键盘背光/辅助功能）
+- **媒体键拦截**：CGEvent Tap
+- **剪贴板热键**：Carbon RegisterEventHotKey
+- **电池监听**：IOKit.ps
+- **音量控制**：CoreAudio
 
 ---
 
 ## 常见问题
 
-**Q：启动时提示「无法打开，因为无法验证开发者」？**
-A：macOS 对未签名 / 未公证的 App 会拦截。可右键 App → 「打开」，在弹窗中确认；或在「系统设置 → 隐私与安全性」中点击「仍要打开」。自行构建的版本不会出现此问题（由你的开发者环境签名）。
+**Q：启动时提示「无法验证开发者」？**
+A：右键 App →「打开」，在弹窗中确认；或在「系统设置 → 隐私与安全性」中点击「仍要打开」。自行构建的版本不会出现此问题。
+
+**Q：系统 HUD 不生效？**
+A：HUD 替换需要辅助功能权限。在设置 → HUD 中开启后，系统会提示授权，前往「系统设置 → 隐私与安全性 → 辅助功能」中允许 DropNest。
+
+**Q：悬浮巢摇晃召唤不灵敏？**
+A：在设置中调整「摇晃灵敏度」和「最小振幅」。灵敏度越高所需振幅越小。
+
+**Q：剪贴板快速面板不出现？**
+A：确认设置 → 剪贴板中已开启热键。`⌃⌥V` 可能与其他应用冲突，检查系统快捷键设置。
 
 **Q：Shelf 里的文件重启后打不开了？**
-A：极少数情况下安全书签可能失效（例如文件被移动 / 删除）。重新拖入该文件即可。DropNest 已通过 `files.bookmarks` 权限尽量保证持久化。
-
-**Q：为什么没有电池 / 日历 / 歌词？**
-A：这些是原 boring.notch 的功能，已在 DropNest 中刻意裁剪，只保留 Shelf 与媒体条两项核心能力。
-
-**Q：刘海拖拽不灵敏？**
-A：在设置中调整「拖拽检测区域」的大小与灵敏度。
+A：极少数情况下安全书签可能失效（文件被移动/删除）。重新拖入该文件即可。
 
 ---
 
@@ -260,20 +310,21 @@ A：在设置中调整「拖拽检测区域」的大小与灵敏度。
 
 1. 退出 DropNest（菜单栏图标 → 退出）。
 2. 将 `应用程序/DropNest.app` 拖入废纸篓。
-3. （可选）删除偏好文件：`~/Library/Containers/com.dropnest.app/`（路径对应 bundle id）。
+3. （可选）删除偏好文件：`~/Library/Containers/com.dropnest.app/`。
 4. 若开启了登录启动，在「系统设置 → 通用 → 登录项」中移除 DropNest。
+5. 若授予了辅助功能权限，在「系统设置 → 隐私与安全性 → 辅助功能」中移除。
 
 ---
 
 ## 贡献
 
-欢迎参与 DropNest 的开发与完善！无论是报告 Bug、提出功能建议，还是提交代码，我们都非常感谢。
+欢迎参与 DropNest 的开发与完善！
 
-- 📘 **贡献指南**：[CONTRIBUTING.md](CONTRIBUTING.md) — 开发环境、构建、代码规范、提交信息约定与 PR 流程。
-- 🐛 **报告问题**：请使用仓库的 [Bug Report 模板](.github/ISSUE_TEMPLATE/bug_report.yml)。
-- 💡 **功能建议**：请使用 [Feature Request 模板](.github/ISSUE_TEMPLATE/feature_request.yml)。
-- 🤝 **行为准则**：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
-- 🔒 **安全漏洞**：请按 [SECURITY.md](SECURITY.md) 私报告知，**勿公开提 Issue**。
+- 📘 **贡献指南**：[CONTRIBUTING.md](CONTRIBUTING.md)
+- 🐛 **报告问题**：[Bug Report 模板](.github/ISSUE_TEMPLATE/bug_report.yml)
+- 💡 **功能建议**：[Feature Request 模板](.github/ISSUE_TEMPLATE/feature_request.yml)
+- 🤝 **行为准则**：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- 🔒 **安全漏洞**：请按 [SECURITY.md](SECURITY.md) 私报告知
 
 ---
 
@@ -282,13 +333,15 @@ A：在设置中调整「拖拽检测区域」的大小与灵敏度。
 本项目以 **GNU General Public License v3.0（GPL-3.0）** 发布。
 
 - 完整许可证文本见 [`LICENSE`](LICENSE)。
-- 第三方依赖的许可证汇总见 [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES)（含 MediaRemoteAdapter 的 BSD-3-Clause 等）。
+- 第三方依赖许可证汇总见 [`THIRD_PARTY_LICENSES`](THIRD_PARTY_LICENSES)。
 - 因本项目派生于 GPL-3.0 的 boring.notch，**你必须在此许可证下使用、修改与分发本软件**；任何再分发都需附带对应源码。
 
 ---
 
 ## 致谢
 
-- [TheBoredTeam/boring.notch](https://github.com/TheBoredTeam/boring.notch) —— DropNest 的源头项目，提供了刘海窗口的完整思路与实现基础。
-- [ungive/mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) —— 系统级媒体状态获取能力。
-- [Lakr233/SkyLightWindow](https://github.com/Lakr233/SkyLightWindow)、[sindresorhus/Defaults](https://github.com/sindresorhus/Defaults)、[sindresorhus/LaunchAtLogin-Modern](https://github.com/sindresorhus/LaunchAtLogin-Modern)、[swiftlang/swift-syntax](https://github.com/swiftlang/swift-syntax) —— 本项目依赖的开源库。
+- [TheBoredTeam/boring.notch](https://github.com/TheBoredTeam/boring.notch) —— 刘海窗口的完整思路与实现基础。
+- [ungive/mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) —— 系统级媒体状态获取。
+- [Lakr233/SkyLightWindow](https://github.com/Lakr233/SkyLightWindow) —— 贴合刘海的原生窗口方案。
+- [sindresorhus/Defaults](https://github.com/sindresorhus/Defaults) · [LaunchAtLogin-Modern](https://github.com/sindresorhus/LaunchAtLogin-Modern) —— 偏好存储与登录启动。
+- [swiftlang/swift-syntax](https://github.com/swiftlang/swift-syntax) —— Swift 语法支持。
