@@ -1,0 +1,121 @@
+name: Build & Release
+
+# 打包 DropNest.app 为 DMG 并发布到 GitHub Releases。
+#
+# 触发条件：
+#   1. push tag v* → 构建并创建 Release
+#   2. 手动触发（Actions → Run workflow）→ 仅构建，上传 artifact
+#
+# 签名说明：CI 无开发者账号，使用 ad-hoc 签名（CODE_SIGN_IDENTITY="-"）。
+# 产出的 DMG 未做 Apple 公证，用户首次打开需手动去隔离属性（见 Release 说明）。
+# 正式签名+公证版本请用本地开发者账号构建。
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write  # 创建 Release 需要
+
+jobs:
+  build:
+    name: Build DMG
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show environment
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Build app (ad-hoc signed)
+        run: |
+          xcodebuild \
+            -project DropNest.xcodeproj \
+            -scheme DropNest \
+            -configuration Release \
+            -derivedDataPath build \
+            -destination 'generic/platform=macOS' \
+            build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
+
+      - name: Locate .app bundle
+        id: locate
+        run: |
+          APP_PATH="$(find build/Build/Products -name 'DropNest.app' -type d | head -1)"
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::DropNest.app not found in build output"
+            exit 1
+          fi
+          echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
+          echo "Found app at: $APP_PATH"
+
+      - name: Setup Python for dmgbuild
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dmgbuild (hash-pinned)
+        run: |
+          python3 -m pip install --require-hashes -r Configuration/dmg/requirements.txt
+
+      - name: Build DMG
+        run: |
+          chmod +x ./Configuration/dmg/create_dmg.sh
+          ./Configuration/dmg/create_dmg.sh \
+            "${{ steps.locate.outputs.app_path }}" \
+            "build/DropNest.dmg" \
+            "DropNest"
+
+      - name: Read version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="dev-$(date +%Y%m%d)-${GITHUB_SHA::7}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DropNest-${{ steps.version.outputs.version }}
+          path: build/DropNest.dmg
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/DropNest.dmg
+          name: DropNest ${{ github.ref_name }}
+          body: |
+            ## DropNest ${{ github.ref_name }}
+
+            ### 安装步骤
+
+            1. 下载 `DropNest.dmg`
+            2. 将 DropNest 拖入「应用程序」文件夹
+            3. 首次打开：因未做 Apple 公证，需在终端执行：
+               ```bash
+               xattr -d com.apple.quarantine /Applications/DropNest.app
+               ```
+               或右键点击应用 →「打开」→ 确认。
+
+            > 本构建为 ad-hoc 签名（未公证）。正式签名版本请用 Apple Developer 账号本地构建。
+
+            ### 完整变更
+          draft: false
+          prerelease: false
+          generate_release_notes: true
