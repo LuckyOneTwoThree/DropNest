@@ -82,7 +82,10 @@ struct ClipboardItemView: View {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
+                    .frame(width: 28, height: 28)
+                    .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .help("点击行复制 · 右键快速查看大图")
             } else {
                 symbolThumb("photo")
             }
