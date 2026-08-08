@@ -55,7 +55,9 @@ enum ShelfItemKind: Codable, Equatable, Sendable {
 ///
 /// key 用书签数据本身：书签刷新（stale refresh 写回新 bookmark）后 key 变化，
 /// 自动失效重新解析。只缓存成功案例，失败路径每次重试。
-@MainActor
+///
+/// 非 @MainActor：用 NSLock 保护内部字典，可在任意线程安全访问。
+/// 解耦自 ViewModel 单例，使 ShelfItem 的 fileURL/cleanupStoredData 不再依赖 MainActor。
 final class ShelfItemResolutionCache {
     static let shared = ShelfItemResolutionCache()
 
@@ -69,36 +71,45 @@ final class ShelfItemResolutionCache {
     /// 简单容量保护：超限时整体清空（代价仅是重新解析一轮）
     private let maxEntries = 1000
 
+    private let lock = NSLock()
+
     func cachedContext(for bookmarkData: Data) -> (url: URL, bookmark: Data)? {
-        contexts[bookmarkData]
+        lock.lock(); defer { lock.unlock() }
+        return contexts[bookmarkData]
     }
 
     func storeContext(_ context: (url: URL, bookmark: Data), for bookmarkData: Data) {
+        lock.lock(); defer { lock.unlock() }
         if contexts.count > maxEntries { contexts.removeAll(keepingCapacity: true) }
         contexts[bookmarkData] = context
     }
 
     func cachedDisplayName(for bookmarkData: Data) -> String? {
-        displayNames[bookmarkData]
+        lock.lock(); defer { lock.unlock() }
+        return displayNames[bookmarkData]
     }
 
     func storeDisplayName(_ name: String, for bookmarkData: Data) {
+        lock.lock(); defer { lock.unlock() }
         if displayNames.count > maxEntries { displayNames.removeAll(keepingCapacity: true) }
         displayNames[bookmarkData] = name
     }
 
     func cachedIcon(forPath path: String) -> NSImage? {
-        icons[path]
+        lock.lock(); defer { lock.unlock() }
+        return icons[path]
     }
 
     func storeIcon(_ icon: NSImage, forPath path: String) {
+        lock.lock(); defer { lock.unlock() }
         if icons.count > maxEntries { icons.removeAll(keepingCapacity: true) }
         icons[path] = icon
     }
 }
 
-/// 值类型本体非隔离（Codable/Equatable 可在后台线程使用，如批量 JSON 编码）；
-/// 需要书签解析/图标/缓存的计算属性单独标注 @MainActor。
+/// 值类型本体非隔离（Codable/Equatable 可在后台线程使用，如批量 JSON 编码）。
+/// fileURL/cleanupStoredData 已解耦 ViewModel 单例，可跨 actor 调用。
+/// icon 仍标 @MainActor（NSWorkspace.shared.icon + NSImage 绘制属 AppKit 主线程惯例）。
 struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
     var kind: ShelfItemKind
@@ -112,7 +123,6 @@ struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
         self.groupID = groupID
     }
 
-    @MainActor
     var displayName: String {
         switch kind {
         case .file(let bookmarkData):
@@ -138,7 +148,6 @@ struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
         }
     }
 
-    @MainActor
     private func computeDisplayName(bookmarkData: Data) -> String {
         guard let resolvedURL = resolvedContext(for: bookmarkData)?.url else { return "" }
 
@@ -182,14 +191,15 @@ struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
         }
         return (try? resolvedURL.resourceValues(forKeys: [.localizedNameKey]).localizedName) ?? resolvedURL.lastPathComponent
     }
-    
-    @MainActor
+
+    /// 文件 URL（解析 bookmark，不依赖 ViewModel 单例）。
+    /// stale refresh 写回逻辑保留在 ShelfStateViewModel.resolveFileURL/resolveAndUpdateBookmark，
+    /// 供需要更新 items 数组的场景调用；本属性只读 URL。
     var fileURL: URL? {
-        guard case .file = kind else { return nil }
-        return ShelfStateViewModel.shared.resolveFileURL(for: self)
+        guard case let .file(bookmarkData) = kind else { return nil }
+        return resolvedContext(for: bookmarkData)?.url
     }
 
-    @MainActor
     var URL: URL? {
         if case let .file(bookmark) = kind { return resolvedContext(for: bookmark)?.url }
         else if case let .link(url) = kind { return url }
@@ -201,7 +211,8 @@ struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
         guard case .file = kind else {
             return Self.thumbnailSymbolImage(systemName: kind.iconSymbolName) ?? NSImage()
         }
-        if let resolvedURL = ShelfStateViewModel.shared.resolveFileURL(for: self) {
+        // 用 resolvedContext 解析 URL，不依赖 ViewModel 单例
+        if let resolvedURL = fileURL {
             let path = resolvedURL.path
             if let cached = ShelfItemResolutionCache.shared.cachedIcon(forPath: path) {
                 return cached
@@ -212,15 +223,15 @@ struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
         }
         return NSImage()
     }
-    
 
-    @MainActor
+
+    /// 清理临时文件（非 @MainActor，可从后台线程调用）。
     func cleanupStoredData() {
         guard case let .file(bookmark) = kind,
               let context = resolvedContext(for: bookmark) else { return }
-        
+
         let url = context.url
-        
+
         // Handle temporary files
         if isTemporary {
             TemporaryFileStorageService.shared.removeTemporaryFileIfNeeded(at: url)
@@ -264,7 +275,6 @@ private extension ShelfItem {
 
 // MARK: - Identity key for deduplication
 extension ShelfItem {
-    @MainActor
     var identityKey: String {
         switch kind {
         case .file(let bookmark):
@@ -295,7 +305,6 @@ private extension ShelfItemKind {
 }
 
 private extension ShelfItem {
-    @MainActor
     func resolvedContext(for bookmarkData: Data) -> (url: URL, bookmark: Data)? {
         let cache = ShelfItemResolutionCache.shared
         if let cached = cache.cachedContext(for: bookmarkData) {

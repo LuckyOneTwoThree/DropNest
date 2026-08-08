@@ -13,7 +13,7 @@ private let kSystemDefinedEventType = CGEventType(rawValue: 14)!
 final class MediaKeyInterceptor {
     static let shared = MediaKeyInterceptor()
 
-    private enum NXKeyType: Int {
+    private enum NXKeyType: Int, Sendable {
         case soundUp = 0
         case soundDown = 1
         case brightnessUp = 2
@@ -79,14 +79,36 @@ final class MediaKeyInterceptor {
             place: .headInsertEventTap,
             options: .defaultTap,
             eventsOfInterest: mask,
-            callback: { _, _, cgEvent, userInfo in
+            callback: { _, type, cgEvent, userInfo in
                 guard let userInfo else { return Unmanaged.passRetained(cgEvent) }
                 let interceptor = Unmanaged<MediaKeyInterceptor>.fromOpaque(userInfo).takeUnretainedValue()
-                // CGEvent tap 挂在主 RunLoop（CFRunLoopGetMain），回调在主线程触发；
-                // 但 C 回调本身是 nonisolated，handleEvent 是 @MainActor 隔离方法，
-                // 故用 MainActor.assumeIsolated 同步切入 MainActor（回调必须同步返回事件）。
-                return MainActor.assumeIsolated {
-                    interceptor.handleEvent(cgEvent)
+
+                // 系统在回调耗时超阈值时会静默禁用 tap（.tapDisabledByTimeout / .tapDisabledByUserInput）。
+                // 不处理则 tap 永久失效，用户感知「音量键 HUD 没了，需重启 App」——刘海类应用最高频线上投诉。
+                // 立即重新启用，避免回调链中断。
+                if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                    MainActor.assumeIsolated {
+                        if let tap = interceptor.eventTap {
+                            CGEvent.tapEnable(tap: tap, enable: true)
+                        }
+                    }
+                    return Unmanaged.passRetained(cgEvent)
+                }
+
+                // 回调必须同步返回事件，但实际动作（CoreAudio 读写等）同步执行易触发上述超时。
+                // 改为同步完成事件判定（决定放行/吞掉），实际处理异步执行，回调本身保持微秒级。
+                // 同步判定依赖的均为内存读取（NSEvent 解析 + Defaults 读取），无阻塞 I/O。
+                let decision = interceptor.synchronousDecision(for: cgEvent)
+                switch decision {
+                case .passthrough:
+                    return Unmanaged.passRetained(cgEvent)
+                case .consume:
+                    return nil
+                case .consumeAndDispatch(let action):
+                    // 吞掉原生事件后异步执行实际动作（CoreAudio 读写、HUD 显示等），
+                    // 回调本身已同步返回，不会阻塞事件系统导致 tap 被禁用。
+                    Task { @MainActor in interceptor.executeAsync(action) }
+                    return nil
                 }
             },
             userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
@@ -114,45 +136,72 @@ final class MediaKeyInterceptor {
 
     // MARK: - Event Handling
 
-    private func handleEvent(_ cgEvent: CGEvent) -> Unmanaged<CGEvent>? {
-        guard cgEvent.type != .null else {
-            return Unmanaged.passRetained(cgEvent)
-        }
-        guard let nsEvent = NSEvent(cgEvent: cgEvent),
-              nsEvent.type == .systemDefined,
-              nsEvent.subtype.rawValue == 8 else {
-            return Unmanaged.passRetained(cgEvent)
-        }
+    /// 回调同步判定结果：决定放行还是吞掉事件，若吞掉则携带需异步执行的动作。
+    private enum TapDecision: Sendable {
+        case passthrough           // 放行原生事件
+        case consume               // 吞掉事件，无后续动作
+        case consumeAndDispatch(MediaKeyAction)
+    }
 
-        let data1 = nsEvent.data1
-        let keyCode = (data1 & 0xFFFF_0000) >> 16
-        let stateByte = ((data1 & 0xFF00) >> 8)
+    /// 回调内异步执行的实际动作（CoreAudio 读写、HUD 显示等）。
+    /// 用 Sendable 枚举携带最小参数，跨 actor 传递后在 MainActor 上执行。
+    private enum MediaKeyAction: Sendable {
+        case optionAction(keyType: NXKeyType, command: Bool)
+        case keyPress(keyType: NXKeyType, option: Bool, shift: Bool, command: Bool)
+    }
 
-        // 0xA = key down, 0xB = key up，只处理 key down
-        guard stateByte == 0xA,
-              let keyType = NXKeyType(rawValue: keyCode) else {
-            return Unmanaged.passRetained(cgEvent)
-        }
-
-        let flags = nsEvent.modifierFlags
-        let option = flags.contains(.option)
-        let shift = flags.contains(.shift)
-        let command = flags.contains(.command)
-
-        // Option 键按下时走特殊行为（不含 shift）
-        if option && !shift {
-            if handleOptionAction(for: keyType, command: command) {
-                return nil
+    /// CGEvent tap 回调内同步调用（tap 挂在 main RunLoop，回调在主线程，assumeIsolated 安全）。
+    /// 仅做事件解析 + 判定（NSEvent 解析 + Defaults 读取，均为内存操作，微秒级），
+    /// 实际动作（CoreAudio 读写等）由调用方异步执行，避免回调超时触发 tap 被系统禁用。
+    private nonisolated func synchronousDecision(for cgEvent: CGEvent) -> TapDecision {
+        MainActor.assumeIsolated {
+            guard cgEvent.type != .null else { return .passthrough }
+            guard let nsEvent = NSEvent(cgEvent: cgEvent),
+                  nsEvent.type == .systemDefined,
+                  nsEvent.subtype.rawValue == 8 else {
+                return .passthrough
             }
-        }
 
-        // 检查对应能力是否启用。未启用的类别放行原生事件（透传），避免拦截后无 HUD 又抑制原生 bezel。
-        if !isCapabilityEnabled(for: keyType) {
-            return Unmanaged.passRetained(cgEvent)
-        }
+            let data1 = nsEvent.data1
+            let keyCode = (data1 & 0xFFFF_0000) >> 16
+            let stateByte = ((data1 & 0xFF00) >> 8)
 
-        handleKeyPress(keyType: keyType, option: option, shift: shift, command: command)
-        return nil
+            // 0xA = key down, 0xB = key up，只处理 key down
+            guard stateByte == 0xA,
+                  let keyType = NXKeyType(rawValue: keyCode) else {
+                return .passthrough
+            }
+
+            let flags = nsEvent.modifierFlags
+            let option = flags.contains(.option)
+            let shift = flags.contains(.shift)
+            let command = flags.contains(.command)
+
+            // Option 键按下时走特殊行为（不含 shift）
+            if option && !shift {
+                // optionAction 只在 action != .none 时才吞掉事件
+                if Defaults[.optionKeyAction] != .none {
+                    return .consumeAndDispatch(.optionAction(keyType: keyType, command: command))
+                }
+                // action == .none：吞掉事件但不执行动作（保持原抑制原生行为语义）
+                return .consume
+            }
+
+            // 检查对应能力是否启用。未启用的类别放行原生事件（透传），避免拦截后无 HUD 又抑制原生 bezel。
+            guard isCapabilityEnabled(for: keyType) else { return .passthrough }
+
+            return .consumeAndDispatch(.keyPress(keyType: keyType, option: option, shift: shift, command: command))
+        }
+    }
+
+    /// 异步执行回调判定出的动作（CoreAudio 读写、HUD 显示等）。
+    private func executeAsync(_ action: MediaKeyAction) {
+        switch action {
+        case .optionAction(let keyType, let command):
+            handleOptionAction(for: keyType, command: command)
+        case .keyPress(let keyType, let option, let shift, let command):
+            handleKeyPress(keyType: keyType, option: option, shift: shift, command: command)
+        }
     }
 
     /// 按键类别对应的独立功能开关是否启用。

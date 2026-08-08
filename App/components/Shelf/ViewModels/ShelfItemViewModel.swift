@@ -27,14 +27,31 @@ final class ShelfItemViewModel: ObservableObject {
     private var quickShareLifecycle: SharingLifecycleDelegate?
     private var sharingAccessingURLs: [URL] = []
     private static var copiedURLs: [URL] = []
+    /// 复制后延迟释放 security-scoped 句柄的定时任务。
+    /// pasteboard 已写入文件 URL 引用，接收方用自己的权限访问文件，
+    /// 本 App 持有的 security-scoped 句柄仅用于写入 pasteboard 那一刻，之后即可释放。
+    /// 60s 足够用户完成粘贴；不释放则会进程生命周期常驻，配额耗尽后所有 bookmark 解析静默失败。
+    private static var releaseCopiedURLsWorkItem: DispatchWorkItem?
 
-    /// 释放「复制」操作持有的安全作用域访问（退出/清理时调用）。
+    /// 释放「复制」操作持有的安全作用域访问（退出/清理/超时/下次复制时调用）。
     /// 否则 startAccessing 的资源要拖到下一次复制才 stop，App 退出前一直泄漏。
     static func releaseCopiedURLs() {
+        releaseCopiedURLsWorkItem?.cancel()
+        releaseCopiedURLsWorkItem = nil
         for url in copiedURLs {
             url.stopAccessingSecurityScopedResource()
         }
         copiedURLs.removeAll()
+    }
+
+    /// 复制后启动 60s 倒计时释放 security-scoped 句柄。
+    private static func scheduleReleaseCopiedURLs() {
+        releaseCopiedURLsWorkItem?.cancel()
+        let workItem = DispatchWorkItem {
+            releaseCopiedURLs()
+        }
+        releaseCopiedURLsWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60, execute: workItem)
     }
 
     private let selection = ShelfSelectionModel.shared
@@ -558,9 +575,14 @@ final class ShelfItemViewModel: ObservableObject {
                         // Start security-scoped access for all URLs and keep them active
                         ShelfItemViewModel.copiedURLs = fileURLs.filter { $0.startAccessingSecurityScopedResource() }
                         NSLog("🔐 Started security-scoped access for \(ShelfItemViewModel.copiedURLs.count) copied files")
-                        
+
                         // Write to pasteboard
                         pb.writeObjects(fileURLs as [NSURL])
+
+                        // 60s 后自动释放 security-scoped 句柄：pasteboard 已持有文件 URL 引用，
+                        // 接收方用自己的权限访问文件，本 App 的句柄仅写入 pasteboard 那一刻需要。
+                        // 不释放则会进程生命周期常驻，配额耗尽后所有 bookmark 解析静默失败。
+                        ShelfItemViewModel.scheduleReleaseCopiedURLs()
                     } else {
                         let strings = selected.map { $0.displayName }
                         if !strings.isEmpty {

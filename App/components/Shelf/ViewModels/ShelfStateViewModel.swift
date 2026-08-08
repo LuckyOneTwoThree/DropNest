@@ -100,8 +100,9 @@ final class ShelfStateViewModel: ObservableObject {
         expandedGroupIDs.remove(groupID)
         let toRemove = items.filter { $0.groupID == groupID }
         items.removeAll { $0.groupID == groupID }
-        // 临时文件清理推迟到下一个 runloop，避免阻塞主线程渲染
-        Task { @MainActor in
+        // 临时文件清理在后台线程执行（cleanupStoredData 已解耦 @MainActor），
+        // 避免批量删除时主线程被 FileManager IO 阻塞
+        Task.detached(priority: .utility) {
             for item in toRemove {
                 item.cleanupStoredData()
             }
@@ -141,8 +142,8 @@ final class ShelfStateViewModel: ObservableObject {
     func remove(_ item: ShelfItem) {
         let removedGroupID = item.groupID
         items.removeAll { $0.id == item.id }
-        // 临时文件清理推迟到下一个 runloop，避免阻塞主线程渲染
-        Task { @MainActor in
+        // 临时文件清理在后台线程执行（cleanupStoredData 已解耦 @MainActor）
+        Task.detached(priority: .utility) {
             item.cleanupStoredData()
         }
         // 删除后若所属组已空，关闭对应桌面巢（避免残留"载入中"空巢）
@@ -157,8 +158,8 @@ final class ShelfStateViewModel: ObservableObject {
     func clearAll() {
         let removed = items
         items = []
-        // 临时文件清理推迟到下一个 runloop，避免阻塞主线程渲染
-        Task { @MainActor in
+        // 临时文件清理在后台线程执行（cleanupStoredData 已解耦 @MainActor）
+        Task.detached(priority: .utility) {
             for item in removed {
                 item.cleanupStoredData()
             }
