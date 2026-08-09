@@ -46,12 +46,13 @@ enum ShelfActionService {
     }
 
     private static func handleBookmarkedFile(_ bookmarkData: Data, action: @escaping @Sendable (URL) -> Void) {
-        Task {
+        // Task.detached 确保 bookmark.resolveURL() 在后台线程执行，不阻塞主线程。
+        // 之前用结构化 Task 继承 @MainActor，导致 resolve 在主线程同步执行。
+        Task.detached(priority: .userInitiated) {
             let bookmark = Bookmark(data: bookmarkData)
-            if let url = bookmark.resolveURL() {
-                url.accessSecurityScopedResource { accessibleURL in
-                    action(accessibleURL)
-                }
+            guard let url = bookmark.resolveURL() else { return }
+            url.accessSecurityScopedResource { accessibleURL in
+                action(accessibleURL)
             }
         }
     }

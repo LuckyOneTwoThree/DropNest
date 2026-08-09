@@ -17,9 +17,7 @@ struct DropNestApp: App {
     var body: some Scene {
         MenuBarExtra("DropNest", systemImage: "sparkle", isInserted: $showMenuBarIcon) {
             Button("设置") {
-                DispatchQueue.main.async {
-                    SettingsWindowController.shared.showWindow()
-                }
+                SettingsWindowController.shared.showWindow()
             }
             .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
             Divider()
@@ -62,6 +60,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         // 退出前立即将货架数据落盘，避免异步 saveTask 被终止而丢失。
         ShelfPersistenceService.shared.saveImmediately(ShelfStateViewModel.shared.items)
+        ClipboardHistoryStore.shared.saveImmediately()
 
         NotificationCenter.default.removeObserver(self)
         for observer in notificationObservers {
@@ -77,6 +76,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             screenUnlockedObserver = nil
         }
         MusicManager.shared.destroy()
+        // 停止媒体键事件拦截：清理 CGEvent tap、CFRunLoopSource、healthCheckTimer，
+        // 避免退出期间 healthCheckTimer 再触发访问已半销毁状态
+        MediaKeyInterceptor.shared.stop()
         // 释放「复制」持有的安全作用域资源，避免退出前泄漏
         ShelfItemViewModel.releaseCopiedURLs()
         // 清理摇晃检测器采样与悬浮暂存巢群
@@ -368,8 +370,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         notificationObservers.append(NotificationCenter.default.addObserver(
             forName: Notification.Name.automaticallySwitchDisplayChanged, object: nil, queue: nil
         ) { [weak self] _ in
-            guard let self = self, let window = self.window else { return }
+            // observer 闭包是 nonisolated 上下文，self.window 的访问必须在 MainActor 内
             Task { @MainActor in
+                guard let self, let window = self.window else { return }
                 window.alphaValue = self.coordinator.selectedScreenUUID == self.coordinator.preferredScreenUUID ? 1 : 0
             }
         })
@@ -449,11 +452,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func screenConfigurationDidChange() {
         let currentScreens = NSScreen.screens
 
+        // 用 NSStringFromRect 把 NSRect 转成 String 再入 Set：CGRect 的 Hashable
+        // conformance 仅 macOS 15.0+ 可用，直接 Set<CGRect> 会触发版本可用性警告。
         let screensChanged =
             currentScreens.count != previousScreens?.count
             || Set(currentScreens.compactMap { $0.displayUUID })
                 != Set(previousScreens?.compactMap { $0.displayUUID } ?? [])
-            || Set(currentScreens.map { $0.frame }) != Set(previousScreens?.map { $0.frame } ?? [])
+            || Set(currentScreens.map { NSStringFromRect($0.frame) })
+                != Set((previousScreens?.map { NSStringFromRect($0.frame) }) ?? [])
 
         previousScreens = currentScreens
 

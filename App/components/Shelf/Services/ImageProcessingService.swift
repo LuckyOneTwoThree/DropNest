@@ -194,7 +194,9 @@ final class ImageProcessingService {
             let options: [CIImageRepresentationOption: Any] = [
                 CIImageRepresentationOption(rawValue: kCGImageDestinationLossyCompressionQuality as String): quality
             ]
-            return try? ciContext.heifRepresentation(of: ciImage, format: .RGBA8, colorSpace: colorSpace, options: options)
+            // heifRepresentation 在当前部署目标（macOS 14.0）下为非 throwing 函数，
+            // 移除冗余 try? 以消除 "no calls to throwing functions" 警告。
+            return ciContext.heifRepresentation(of: ciImage, format: .RGBA8, colorSpace: colorSpace, options: options)
         }
     }
     

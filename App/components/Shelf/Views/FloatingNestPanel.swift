@@ -37,7 +37,11 @@ final class FloatingNestPanel: NSPanel {
     var groupID: UUID
     private(set) var isGhost: Bool
 
-    private var keyMonitor: Any?
+    private var ghostPanel: NSPanel?
+    // nonisolated(unsafe)：keyMonitor 仅在 MainActor 的 startKeyMonitor/stopKeyMonitor 中读写、
+    // nonisolated deinit 中 removeMonitor。标 nonisolated(unsafe) 允许 deinit 安全访问
+    // （参照 DragDetector.swift 的 mouseDownMonitor 范式）。
+    private nonisolated(unsafe) var keyMonitor: Any?
 
     /// 正式巢的收起回调（收进刘海，集合保留在 Shelf）
     var onDock: ((UUID) -> Void)?
@@ -175,12 +179,16 @@ final class FloatingNestPanel: NSPanel {
     private func startKeyMonitor() {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, self.isKeyWindow else { return event }
-            if event.keyCode == 53 { // esc
-                Task { @MainActor in self.hide() }
-                return nil
+            // NSEvent monitor handler 是 @Sendable 闭包（nonisolated），但回调在主线程 RunLoop 派发。
+            // MainActor.assumeIsolated 向编译器声明隔离，零运行时开销。
+            MainActor.assumeIsolated {
+                guard let self, self.isKeyWindow else { return event }
+                if event.keyCode == 53 { // esc
+                    self.hide()
+                    return nil
+                }
+                return event
             }
-            return event
         }
     }
 
@@ -274,7 +282,9 @@ private struct FloatingNestRootView: View {
             // 先暂存 providers，再延迟到下一个 runloop 触发孵化
             // 避免在 onDrop 回调内同步重建 contentView 导致 drop 会话状态错乱
             FloatingNestManager.shared.pendingDropProviders = providers
-            DispatchQueue.main.async {
+            // .onDrop 闭包已是 @MainActor；Task { @MainActor in } 保持"延迟到下一个 runloop"
+            // 语义，同时避免 DispatchQueue.main.async 把闭包变为 nonisolated 上下文触发 actor 隔离警告。
+            Task { @MainActor in
                 onHatch?()
             }
             return true
@@ -398,6 +408,7 @@ private struct NestGridContent: View {
         ) {
             ForEach(members) { item in
                 NestCell(item: item)
+                    .equatable()
                     .transition(.scale(scale: 0.5).combined(with: .opacity))
             }
         }
@@ -410,16 +421,22 @@ private struct NestGridContent: View {
 
 private struct NestCell: View {
     let item: ShelfItem
+    // 缓存 icon 和 displayName，避免 body 路径每次重估都触发同步磁盘 IO
+    //（ShelfItemResolutionCache 未命中时 item.icon→NSWorkspace.icon、
+    //  item.displayName→Data(contentsOf:) 均为主线程阻塞）。
+    // .task 只在 appear / item.id 变化时执行一次，不随父视图重估重复触发。
+    @State private var icon: NSImage?
+    @State private var displayName: String = ""
 
     var body: some View {
         VStack(spacing: 4) {
-            Image(nsImage: item.icon)
+            Image(nsImage: icon ?? NSImage())
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
-            Text(item.displayName)
+            Text(displayName)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -427,6 +444,20 @@ private struct NestCell: View {
                 .frame(width: 60)
         }
         .overlay(NestCellDragHandler(item: item)) // 单个条目拖出
+        .task(id: item.id) {
+            icon = item.icon
+            displayName = item.displayName
+        }
+    }
+}
+
+// MARK: - NestCell Equatable（item 不变时跳过 body 重估）
+
+extension NestCell: Equatable {
+    static func == (lhs: NestCell, rhs: NestCell) -> Bool {
+        // item 不变时 @State icon/displayName 通过 .task(id: item.id) 保持同步，
+        // 无需重估 body。item 变化时重绘。
+        lhs.item == rhs.item
     }
 }
 

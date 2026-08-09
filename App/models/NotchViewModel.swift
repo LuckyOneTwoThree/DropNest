@@ -110,6 +110,7 @@ class NotchViewModel: NSObject, ObservableObject {
 
         // Switching tabs while open re-sizes the notch (clipboard is taller).
         $openTab
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] tab in
                 guard let self, self.notchState == .open else { return }
                 self.notchSize = tab == .clipboard

@@ -20,7 +20,10 @@ final class QuickLookService: ObservableObject {
 
     private var previewPanel: QLPreviewPanel?
     private var dataSource: QuickLookDataSource?
-    private var accessingURLs: [URL] = []
+    // nonisolated(unsafe)：仅在 MainActor 的 show/hide/stopAccessingCurrentURLs 中读写、
+    // nonisolated deinit 中释放 security-scoped 句柄。标 nonisolated(unsafe) 允许 deinit
+    // 安全访问（参照 ShelfItemViewModel.sharingAccessingURLs 范式）。
+    private nonisolated(unsafe) var accessingURLs: [URL] = []
     private var previewPanelObserver: Any?
 
     deinit {

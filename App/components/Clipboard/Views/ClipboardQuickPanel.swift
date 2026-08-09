@@ -30,8 +30,12 @@ final class ClipboardQuickPanelState: ObservableObject {
 
 final class ClipboardQuickPanel: NSPanel {
     private let state = ClipboardQuickPanelState()
-    private var keyMonitor: Any?
-    private var resignObserver: Any?
+    // nonisolated(unsafe)：NSPanel 子类隐式 @MainActor，monitor/observer token 仅在
+    // MainActor 的 startKeyMonitor/init 中赋值、nonisolated deinit 中移除。
+    // 标 nonisolated(unsafe) 允许 deinit 安全访问
+    // （参照 DragDetector.swift 的 mouseDownMonitor 范式）。
+    private nonisolated(unsafe) var keyMonitor: Any?
+    private nonisolated(unsafe) var resignObserver: Any?
 
     init() {
         super.init(
@@ -87,8 +91,12 @@ final class ClipboardQuickPanel: NSPanel {
     private func startKeyMonitor() {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, self.isKeyWindow else { return event }
-            return self.handleKey(event) ? nil : event
+            // NSEvent monitor handler 是 @Sendable 闭包（nonisolated），但回调在主线程 RunLoop 派发。
+            // MainActor.assumeIsolated 向编译器声明隔离，零运行时开销。
+            MainActor.assumeIsolated {
+                guard let self, self.isKeyWindow else { return event }
+                return self.handleKey(event) ? nil : event
+            }
         }
     }
 

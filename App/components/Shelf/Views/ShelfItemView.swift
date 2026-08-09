@@ -72,8 +72,8 @@ struct ShelfItemView: View {
             }
         }
         .onAppear {
-            Task { 
-                await viewModel.loadThumbnail()
+            viewModel.setupOnAppear()
+            Task {
                 // Pre-render drag preview once on appear
                 if cachedPreviewImage == nil {
                     cachedPreviewImage = await renderDragPreview()
@@ -172,10 +172,11 @@ struct ShelfItemView: View {
 
 extension ShelfItemView: Equatable {
     static func == (lhs: ShelfItemView, rhs: ShelfItemView) -> Bool {
-        lhs.item.id == rhs.item.id &&
-        lhs.viewModel.cachedDisplayName == rhs.viewModel.cachedDisplayName &&
-        (lhs.viewModel.thumbnail != nil) == (rhs.viewModel.thumbnail != nil) &&
-        lhs.viewModel.isSelected == rhs.viewModel.isSelected
+        // viewModel 是 @StateObject，父视图重绘时 lhs/rhs 为同一实例，
+        // 比较其属性恒为 true，无实际差分效果。
+        // 简化为只比 item（ShelfItem 已 conform Equatable）：
+        // item 变化时重绘，否则短路跳过。
+        lhs.item == rhs.item
     }
 }
 
@@ -230,16 +231,14 @@ private struct DraggableClickHandler<Content: View>: NSViewRepresentable {
     func makeNSView(context: Context) -> DraggableClickView {
         let view = DraggableClickView()
         view.item = item
-        view.viewModel = viewModel
         view.dragPreviewImage = cachedPreviewImage ?? renderDragPreview()
         view.onRightClick = onRightClick
         view.onClick = onClick
         return view
     }
-    
+
     func updateNSView(_ nsView: DraggableClickView, context: Context) {
         nsView.item = item
-        nsView.viewModel = viewModel
         // Only update preview if cached version is available
         if let cached = cachedPreviewImage {
             nsView.dragPreviewImage = cached
@@ -263,7 +262,6 @@ private struct DraggableClickHandler<Content: View>: NSViewRepresentable {
     
     final class DraggableClickView: NSView, NSDraggingSource {
         var item: ShelfItem?
-        weak var viewModel: ShelfItemViewModel?
         var dragPreviewImage: NSImage?
         var onRightClick: ((NSEvent, NSView) -> Void)?
         var onClick: ((NSEvent, NSView) -> Void)?

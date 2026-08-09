@@ -328,6 +328,20 @@ final class ClipboardHistoryStore: ObservableObject {
         }
     }
 
+    /// 立即保存（应用退出等场景），跳过防抖延迟，阻塞当前线程写入
+    func saveImmediately() {
+        saveTask?.cancel()
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted]
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(items)
+            try data.write(to: fileURL, options: .atomic)
+        } catch {
+            print("❌ Failed to synchronously save clipboard history: \(error.localizedDescription)")
+        }
+    }
+
     /// 从磁盘加载历史（纯函数，可安全在后台线程执行）。
     /// 容错路径：单条损坏时逐条 salvage，避免整份历史因一条坏数据丢失。
     private nonisolated static func load(from url: URL) -> [ClipboardItem] {

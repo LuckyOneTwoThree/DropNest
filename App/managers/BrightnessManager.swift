@@ -64,6 +64,7 @@ final class BrightnessManager: ObservableObject {
 // MARK: - Keyboard Backlight Controller
 
 /// 键盘背光管理器，通过 XPC Helper 调用 CoreBrightness 私有框架读写键盘背光。
+@MainActor
 final class KeyboardBacklightManager: ObservableObject {
     static let shared = KeyboardBacklightManager()
 
@@ -78,15 +79,15 @@ final class KeyboardBacklightManager: ObservableObject {
     var shouldShowOverlay: Bool { Date().timeIntervalSince(lastChangeAt) < visibleDuration }
 
     func refresh() {
-        Task { @MainActor in
+        Task {
             if let current = await client.currentKeyboardBrightness() {
                 publish(brightness: current, touchDate: false)
             }
         }
     }
 
-    @MainActor func setRelative(delta: Float) {
-        Task { @MainActor in
+    func setRelative(delta: Float) {
+        Task {
             let starting = await client.currentKeyboardBrightness() ?? rawBrightness
             let target = max(0, min(1, starting + delta))
             let ok = await client.setKeyboardBrightness(target)
@@ -110,7 +111,7 @@ final class KeyboardBacklightManager: ObservableObject {
 
     func setAbsolute(value: Float) {
         let clamped = max(0, min(1, value))
-        Task { @MainActor in
+        Task {
             let ok = await client.setKeyboardBrightness(clamped)
             if ok {
                 publish(brightness: clamped, touchDate: true)
@@ -121,11 +122,10 @@ final class KeyboardBacklightManager: ObservableObject {
     }
 
     private func publish(brightness: Float, touchDate: Bool) {
-        DispatchQueue.main.async {
-            if self.rawBrightness != brightness || touchDate {
-                if touchDate { self.lastChangeAt = Date() }
-                self.rawBrightness = brightness
-            }
+        // 类已 @MainActor 隔离，无需 DispatchQueue.main.async 跳帧
+        if rawBrightness != brightness || touchDate {
+            if touchDate { lastChangeAt = Date() }
+            rawBrightness = brightness
         }
     }
 }

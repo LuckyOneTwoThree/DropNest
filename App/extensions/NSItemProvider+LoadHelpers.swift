@@ -10,6 +10,11 @@ import AppKit
 import Foundation
 import UniformTypeIdentifiers
 
+// NSItemProvider 是线程安全的（loadItem/loadFileRepresentation 等可跨线程调用）。
+// 标记为 @unchecked Sendable 以消除 withCheckedContinuation 的 @Sendable 闭包
+// 捕获非 Sendable self 的警告（NSItemProvider 是 ObjC 类，编译器无法自动推断 Sendable）。
+extension NSItemProvider: @unchecked Sendable {}
+
 extension NSItemProvider {
     
     func extractItem() async -> URL? {

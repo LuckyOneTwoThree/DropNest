@@ -87,9 +87,13 @@ private struct ScrollMonitor: NSViewRepresentable {
         func installMonitor(on view: NSView) {
             removeMonitor()
             monitor = NSEvent.addLocalMonitorForEvents(matching: [.scrollWheel]) { [weak self, weak view] event in
-                guard let self = self, event.window === view?.window else { return event }
-                self.handleScroll(event)
-                return event
+                // NSEvent monitor handler 是 @Sendable 闭包（nonisolated），但回调在主线程 RunLoop 派发。
+                // MainActor.assumeIsolated 向编译器声明隔离，零运行时开销。
+                MainActor.assumeIsolated {
+                    guard let self = self, event.window === view?.window else { return event }
+                    self.handleScroll(event)
+                    return event
+                }
             }
         }
 

@@ -25,19 +25,23 @@ final class ShelfItemViewModel: ObservableObject {
     @Published var draftTitle: String = ""
     private var sharingLifecycle: SharingLifecycleDelegate?
     private var quickShareLifecycle: SharingLifecycleDelegate?
-    private var sharingAccessingURLs: [URL] = []
+    // nonisolated(unsafe)：分享期间持有的 security-scoped URL 列表。
+    // 仅在 MainActor 的 shareItem/stopSharingAccessingURLs 中读写；
+    // 标 nonisolated(unsafe) 允许 nonisolated deinit 在 viewModel 被提前释放时
+    // 释放 security-scoped 句柄（避免沙盒配额泄漏）。
+    private nonisolated(unsafe) var sharingAccessingURLs: [URL] = []
     private static var copiedURLs: [URL] = []
     /// 复制后延迟释放 security-scoped 句柄的定时任务。
     /// pasteboard 已写入文件 URL 引用，接收方用自己的权限访问文件，
     /// 本 App 持有的 security-scoped 句柄仅用于写入 pasteboard 那一刻，之后即可释放。
     /// 60s 足够用户完成粘贴；不释放则会进程生命周期常驻，配额耗尽后所有 bookmark 解析静默失败。
-    private static var releaseCopiedURLsWorkItem: DispatchWorkItem?
+    private static var releaseCopiedURLsTask: Task<Void, Never>?
 
     /// 释放「复制」操作持有的安全作用域访问（退出/清理/超时/下次复制时调用）。
     /// 否则 startAccessing 的资源要拖到下一次复制才 stop，App 退出前一直泄漏。
     static func releaseCopiedURLs() {
-        releaseCopiedURLsWorkItem?.cancel()
-        releaseCopiedURLsWorkItem = nil
+        releaseCopiedURLsTask?.cancel()
+        releaseCopiedURLsTask = nil
         for url in copiedURLs {
             url.stopAccessingSecurityScopedResource()
         }
@@ -45,20 +49,43 @@ final class ShelfItemViewModel: ObservableObject {
     }
 
     /// 复制后启动 60s 倒计时释放 security-scoped 句柄。
+    /// 用 Task + Task.sleep 替代 DispatchWorkItem：
+    /// DispatchWorkItem 闭包是 nonisolated 上下文，调用 @MainActor static 方法
+    /// releaseCopiedURLs() 会触发 actor 隔离警告。Task { @MainActor in } 继承
+    /// MainActor 隔离，直接调用无警告，且 Task.cancel() 语义清晰。
     private static func scheduleReleaseCopiedURLs() {
-        releaseCopiedURLsWorkItem?.cancel()
-        let workItem = DispatchWorkItem {
+        releaseCopiedURLsTask?.cancel()
+        releaseCopiedURLsTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(60))
+            guard !Task.isCancelled else { return }
             releaseCopiedURLs()
         }
-        releaseCopiedURLsWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 60, execute: workItem)
     }
 
     private let selection = ShelfSelectionModel.shared
 
     init(item: ShelfItem) {
         self.item = item
-        self.draftTitle = item.displayName
+        // 初始化保持轻量：不做 bookmark 解析 / NSWorkspace.icon / 磁盘读取，
+        // 避免父视图每次重绘时 throwaway VM 构造触发同步 IO。
+        // displayName / icon 缓存与 thumbnail 加载延迟到 onAppear（setupOnAppear）。
+    }
+
+    deinit {
+        // 分享面板打开期间若条目被移除（viewModel 释放），delegate 的 onEnd 回调
+        // 因 [weak self] 为 nil 而不执行 stopSharingAccessingURLs()，
+        // 导致 security-scoped URL 句柄永久泄漏（耗尽沙盒配额后 bookmark 解析静默失败）。
+        // deinit 中直接释放，确保任何路径下都不泄漏。
+        for url in sharingAccessingURLs {
+            url.stopAccessingSecurityScopedResource()
+        }
+    }
+
+    /// 首次 appear 时调用：初始化缓存与缩略图加载。
+    /// onAppear 在首次渲染后立即执行，短暂空白可接受；
+    /// ShelfItemResolutionCache 命中时为纯内存操作，无磁盘 IO。
+    func setupOnAppear() {
+        guard cachedFallbackIcon == nil else { return } // 幂等：避免重复 appear 重复加载
         refreshCache()
         Task { await loadThumbnail() }
     }
@@ -67,6 +94,7 @@ final class ShelfItemViewModel: ObservableObject {
     func refreshCache() {
         cachedDisplayName = item.displayName
         cachedFallbackIcon = item.icon
+        draftTitle = item.displayName
     }
 
     var isSelected: Bool { selection.isSelected(item.id) }
@@ -259,7 +287,6 @@ final class ShelfItemViewModel: ObservableObject {
             if case .link(let url) = itm.kind { return url }
             return nil
         }
-        let selectedFolderURLs = selectedFileURLs.filter { isDirectory($0) }
         // URLs valid for Open/Open With (exclude folders)
         let selectedOpenableURLs = selectedItems.compactMap { itm -> URL? in
             if let u = itm.fileURL { return isDirectory(u) ? nil : u }
@@ -536,8 +563,10 @@ final class ShelfItemViewModel: ObservableObject {
                 Task {
                     let urls = await selected.asyncCompactMap { item -> URL? in
                         if case .file = item.kind {
-                            // Use immediate update for user-initiated menu action
-                            return await ShelfStateViewModel.shared.resolveAndUpdateBookmark(for: item)
+                            // Use immediate update for user-initiated menu action.
+                            // resolveAndUpdateBookmark 是 @MainActor 同步函数，本 Task 已继承
+                            // MainActor 隔离，同 actor 调用无需 await。
+                            return ShelfStateViewModel.shared.resolveAndUpdateBookmark(for: item)
                         }
                         return nil
                     }
@@ -631,21 +660,19 @@ final class ShelfItemViewModel: ObservableObject {
                 guard !fileURLs.isEmpty else { break }
 
                 Task {
-                    do {
-                        // Create ZIP in a temporary location while holding access to selected resources
-                        if let zipTempURL = try await fileURLs.accessSecurityScopedResources(accessor: { urls in
-                            await TemporaryFileStorageService.shared.createZip(from: urls)
-                        }) {
-                            if let bookmark = try? Bookmark(url: zipTempURL) {
-                                let newItem = ShelfItem(kind: .file(bookmark: bookmark.data), isTemporary: true)
-                                ShelfStateViewModel.shared.add([newItem])
-                            } else {
-                                // Fallback: reveal the temporary file in Finder
-                                NSWorkspace.shared.activateFileViewerSelecting([zipTempURL])
-                            }
+                    // Create ZIP in a temporary location while holding access to selected resources.
+                    // createZip 不抛出错误，accessSecurityScopedResources 标记 rethrows 故整体不抛出，
+                    // 无需 try/do-catch。
+                    if let zipTempURL = await fileURLs.accessSecurityScopedResources(accessor: { urls in
+                        await TemporaryFileStorageService.shared.createZip(from: urls)
+                    }) {
+                        if let bookmark = try? Bookmark(url: zipTempURL) {
+                            let newItem = ShelfItem(kind: .file(bookmark: bookmark.data), isTemporary: true)
+                            ShelfStateViewModel.shared.add([newItem])
+                        } else {
+                            // Fallback: reveal the temporary file in Finder
+                            NSWorkspace.shared.activateFileViewerSelecting([zipTempURL])
                         }
-                    } catch {
-                        print("❌ Compress failed: \(error)")
                     }
                 }
                 
@@ -771,7 +798,7 @@ final class ShelfItemViewModel: ObservableObject {
                     self.chooserDelegate = chooserDelegate
                     self.panel = panel
                 }
-                @objc func changed(_ sender: Any?) {
+                @MainActor @objc func changed(_ sender: Any?) {
                     if popup?.indexOfSelectedItem == 1 {
                         chooserDelegate?.mode = .all
                     } else {
@@ -824,9 +851,13 @@ final class ShelfItemViewModel: ObservableObject {
         @MainActor
         private func showRenameDialog(for item: ShelfItem) {
             guard case let .file(bookmarkData) = item.kind else { return }
-            Task {
+            // 后台解析 bookmark，避免主线程同步 IO
+            Task.detached(priority: .userInitiated) { [weak self] in
                 let bookmark = Bookmark(data: bookmarkData)
-                if let fileURL = bookmark.resolveURL() {
+                guard let fileURL = bookmark.resolveURL() else { return }
+                // 回主线程创建 NSSavePanel（AppKit 要求主线程）
+                await MainActor.run {
+                    guard let self else { return }
                     // Start security-scoped access and keep it active until rename completes.
                     let didStart = fileURL.startAccessingSecurityScopedResource()
 
@@ -837,19 +868,21 @@ final class ShelfItemViewModel: ObservableObject {
                     savePanel.directoryURL = fileURL.deletingLastPathComponent()
                     savePanel.begin { response in
                         if response == .OK, let newURL = savePanel.url {
-                            Task {
+                            // 文件移动在后台执行，避免大文件重命名冻结 UI
+                            Task.detached(priority: .userInitiated) {
+                                // defer 确保 security-scoped 句柄在任何路径下都释放
+                                defer { if didStart { fileURL.stopAccessingSecurityScopedResource() } }
                                 do {
                                     NSLog("🔐 Rename: moving from \(fileURL.path) to \(newURL.path) (securityScope=\(didStart))")
-
                                     try FileManager.default.moveItem(at: fileURL, to: newURL)
-
                                     if let newBookmark = try? Bookmark(url: newURL) {
-                                        ShelfStateViewModel.shared.updateBookmark(for: item, bookmark: newBookmark.data)
+                                        await MainActor.run {
+                                            ShelfStateViewModel.shared.updateBookmark(for: item, bookmark: newBookmark.data)
+                                        }
                                     }
                                 } catch {
                                     print("❌ Failed to rename file: \(error.localizedDescription)")
                                 }
-                                if didStart { fileURL.stopAccessingSecurityScopedResource() }
                             }
                         } else {
                             if didStart { fileURL.stopAccessingSecurityScopedResource() }
@@ -884,7 +917,7 @@ final class ShelfItemViewModel: ObservableObject {
                     }
                 } catch {
                     print("❌ Failed to remove background: \(error.localizedDescription)")
-                    await showErrorAlert(title: "Background Removal Failed", message: error.localizedDescription)
+                    showErrorAlert(title: "Background Removal Failed", message: error.localizedDescription)
                 }
             }
         }
@@ -914,7 +947,7 @@ final class ShelfItemViewModel: ObservableObject {
                     }
                 } catch {
                     print("❌ Failed to create PDF: \(error.localizedDescription)")
-                    await showErrorAlert(title: "PDF Creation Failed", message: error.localizedDescription)
+                    showErrorAlert(title: "PDF Creation Failed", message: error.localizedDescription)
                 }
             }
         }
@@ -1031,13 +1064,13 @@ final class ShelfItemViewModel: ObservableObject {
                     self.updateVisibility = updateVisibility
                     self.updateCustomSize = updateCustomSize
                 }
-                @objc func sliderChanged(_ sender: NSSlider) {
+                @MainActor @objc func sliderChanged(_ sender: NSSlider) {
                     updateLabel()
                 }
-                @objc func formatChanged(_ sender: NSPopUpButton) {
+                @MainActor @objc func formatChanged(_ sender: NSPopUpButton) {
                     updateVisibility()
                 }
-                @objc func sizeChanged(_ sender: NSPopUpButton) {
+                @MainActor @objc func sizeChanged(_ sender: NSPopUpButton) {
                     updateCustomSize()
                 }
             }

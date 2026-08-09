@@ -18,6 +18,7 @@ final class DropNestManagerTests: XCTestCase {
     // MARK: - VolumeManager（软件降级路径，headless 也能测）
 
     /// setAbsolute 必须落在 [0,1]，越界被夹紧。
+    @MainActor
     func testVolumeSetAbsoluteClampsToUnitRange() {
         let m = VolumeManager.shared
 
@@ -37,6 +38,7 @@ final class DropNestManagerTests: XCTestCase {
     }
 
     /// increase / decrease 步进受 stepDivisor 影响，结果仍在 [0,1]。
+    @MainActor
     func testVolumeIncreaseDecreaseStaysInRange() {
         let m = VolumeManager.shared
         m.setAbsolute(0.5)
@@ -103,6 +105,7 @@ final class DropNestManagerTests: XCTestCase {
     // MARK: - BatteryStatusViewModel（初始化冒烟）
 
     /// 单例初始化不应崩溃，且能读出初始电量字段（无需插拔事件）。
+    @MainActor
     func testBatteryViewModelInitializes() {
         let vm = BatteryStatusViewModel.shared
         // 仅断言对象存在且字段可读；具体值依赖真实硬件。

@@ -13,7 +13,11 @@ class AudioSpectrum: NSView {
     private var barLayers: [CAShapeLayer] = []
     private var barScales: [CGFloat] = []
     private var isPlaying: Bool = true
-    private var animationTimer: Timer?
+    // nonisolated(unsafe)：NSView 子类隐式 @MainActor，animationTimer 仅在 MainActor 的
+    // startAnimating/stopAnimating 中读写、nonisolated deinit 中 invalidate。
+    // 标 nonisolated(unsafe) 允许 deinit 安全访问
+    // （参照 DragDetector.swift 的 mouseDownMonitor 范式）。
+    private nonisolated(unsafe) var animationTimer: Timer?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -63,7 +67,9 @@ class AudioSpectrum: NSView {
     private func startAnimating() {
         guard animationTimer == nil else { return }
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
-            self?.updateBars()
+            // Timer block 是 nonisolated 上下文，调用 NSView 的 @MainActor 方法需 Task hop
+            // （参照 ClipboardMonitor.swift 的 Timer 范式）
+            Task { @MainActor in self?.updateBars() }
         }
         if let timer = animationTimer {
             RunLoop.main.add(timer, forMode: .common)

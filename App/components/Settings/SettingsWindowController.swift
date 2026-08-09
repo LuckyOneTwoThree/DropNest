@@ -78,10 +78,9 @@ class SettingsWindowController: NSWindowController {
         // Activate the app and ensure window gets focus
         NSApp.activate(ignoringOtherApps: true)
 
-        // Force window to front after activation
-        DispatchQueue.main.async { [weak self] in
-            self?.window?.makeKeyAndOrderFront(nil)
-        }
+        // showWindow() 已在 MainActor（NSWindowController 子类），无需 DispatchQueue.main.async。
+        // 多余的 async 套层会使闭包变为 nonisolated 上下文，触发 actor 隔离警告。
+        window?.makeKeyAndOrderFront(nil)
     }
 
     override func close() {

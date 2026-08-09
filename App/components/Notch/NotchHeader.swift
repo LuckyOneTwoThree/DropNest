@@ -47,9 +47,7 @@ struct NotchHeader: View {
                     } else {
                         if Defaults[.settingsIconInNotch] {
                             Button(action: {
-                                DispatchQueue.main.async {
-                                    SettingsWindowController.shared.showWindow()
-                                }
+                                SettingsWindowController.shared.showWindow()
                             }) {
                                 Capsule()
                                     .fill(.black)

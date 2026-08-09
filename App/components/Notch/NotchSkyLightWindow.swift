@@ -88,6 +88,7 @@ class NotchSkyLightWindow: NSPanel {
     private func setupObservers() {
         // Listen for changes to the hideFromScreenRecording setting
         Defaults.publisher(.hideFromScreenRecording)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateSharingType()
             }

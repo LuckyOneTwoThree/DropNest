@@ -115,7 +115,7 @@ actor ThumbnailService {
     
     private func generateQuickLookThumbnail(for url: URL, size: CGSize) async -> NSImage? {
         let scale = await MainActor.run { NSScreen.main?.backingScaleFactor ?? 2.0 }
-        
+
         return await url.accessSecurityScopedResource { scopedURL in
             let request = QLThumbnailGenerator.Request(
                 fileAt: scopedURL,
@@ -125,16 +125,39 @@ actor ThumbnailService {
             )
             request.iconMode = true
 
+            // 超时兜底标志：确保 continuation 只 resume 一次。
+            // QLThumbnailGenerator 可能因内部异常不回调，导致 continuation 永久悬挂，
+            // 调用方 loadThumbnail 会永久 await。5 秒超时兜底确保不永久阻塞。
+            let flag = ThumbnailResumeFlag()
             return await withCheckedContinuation { (continuation: CheckedContinuation<NSImage?, Never>) in
                 thumbnailGenerator.generateBestRepresentation(for: request) { representation, _ in
-                    if let rep = representation {
-                        continuation.resume(returning: rep.nsImage)
-                    } else {
+                    if flag.tryFire() {
+                        continuation.resume(returning: representation?.nsImage)
+                    }
+                }
+                Task {
+                    try? await Task.sleep(for: .seconds(5))
+                    if flag.tryFire() {
                         continuation.resume(returning: nil)
                     }
                 }
             }
         }
+    }
+}
+
+/// 缩略图生成超时兜底标志：确保 continuation 只 resume 一次。
+/// 首个调用（QLThumbnailGenerator 回调或超时 Task）生效，后续调用被忽略。
+private final class ThumbnailResumeFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var fired = false
+
+    func tryFire() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !fired else { return false }
+        fired = true
+        return true
     }
 }
 

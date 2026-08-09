@@ -589,7 +589,6 @@ struct HUDSettings: View {
     @Default(.optionKeyAction) var optionKeyAction
 
     @State private var accessibilityAuthorized: Bool = false
-    @State private var monitoringTimer: Timer?
 
     var body: some View {
         Form {
@@ -702,26 +701,21 @@ struct HUDSettings: View {
         .navigationTitle("HUD")
         .task {
             accessibilityAuthorized = MediaKeyInterceptor.isAccessibilityTrusted
-        }
-        .onAppear {
-            monitoringTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            // 已授权则无需轮询
+            guard !accessibilityAuthorized else { return }
+            // 每秒轮询授权状态，授权后自愈启动事件拦截。
+            // .task 在视图从视图树移除时自动取消，无需手动 invalidate Timer，
+            // 避免 NSWindow.close() 不触发 .onDisappear 导致 Timer 持续空转 + @State 泄漏。
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                if Task.isCancelled { return }
                 let trusted = MediaKeyInterceptor.isAccessibilityTrusted
                 accessibilityAuthorized = trusted
-                // 授权到达后自动启动事件拦截（自愈：无需手动重开 App）
                 if trusted {
-                    Task { @MainActor in
-                        await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
-                    }
-                }
-                if trusted {
-                    monitoringTimer?.invalidate()
-                    monitoringTimer = nil
+                    await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
+                    return
                 }
             }
-        }
-        .onDisappear {
-            monitoringTimer?.invalidate()
-            monitoringTimer = nil
         }
     }
 }

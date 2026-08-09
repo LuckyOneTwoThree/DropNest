@@ -7,9 +7,9 @@ struct SystemEventIndicatorModifier: View {
     @Binding var eventType: SneakContentType
     @Binding var value: CGFloat {
         didSet {
-            DispatchQueue.main.async {
-                self.vm.objectWillChange.send()
-            }
+            // SwiftUI View 已隐式 @MainActor，didSet 在 MainActor 上下文执行，
+            // 无需 DispatchQueue.main.async 跳转（多余的 async 套层会使闭包变 nonisolated）
+            vm.objectWillChange.send()
         }
     }
     @Binding var icon: String

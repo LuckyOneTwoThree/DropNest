@@ -99,7 +99,9 @@ struct ShelfView: View {
     /// 一键展开/收起全部桌面巢群。仅当存在集合组时显示。
     @ViewBuilder
     private var nestGroupButton: some View {
-        let hasGroups = tvm.items.contains { $0.groupID != nil }
+        // O(1) 字典判空，替代 O(n) 的 items.contains 遍历。
+        // groupedItems 在 items didSet 时已一次性构建。
+        let hasGroups = !tvm.groupedItems.isEmpty
         if hasGroups {
             Button {
                 if FloatingNestManager.shared.hasVisiblePanels {

@@ -170,6 +170,8 @@ final class VolumeManager: NSObject, ObservableObject {
 
     /// 已注册的设备级 listener（deviceID + address + block），切换默认设备时用于精确移除。
     private var deviceListenerBlocks: [(AudioObjectID, AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
+    /// 系统级 listener block（默认输出设备变化）。存储引用以便退出时精确移除。
+    private var systemListenerBlock: AudioObjectPropertyListenerBlock?
 
     private func setupAudioListener() {
         // 系统级：监听默认输出设备变化。切换设备时需重新注册新设备的 volume/mute listener，
@@ -179,11 +181,13 @@ final class VolumeManager: NSObject, ObservableObject {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        AudioObjectAddPropertyListenerBlock(
-            AudioObjectID(kAudioObjectSystemObject), &defaultDevAddr, nil
-        ) { [weak self] _, _ in
+        let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
             Task { @MainActor in self?.handleDefaultDeviceChange() }
         }
+        systemListenerBlock = block
+        AudioObjectAddPropertyListenerBlock(
+            AudioObjectID(kAudioObjectSystemObject), &defaultDevAddr, nil, block
+        )
 
         // 设备级：注册当前默认设备的 volume/mute listener
         registerDeviceListeners()

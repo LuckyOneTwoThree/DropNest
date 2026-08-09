@@ -328,7 +328,9 @@ private extension ShelfItemKind {
     }
 }
 
-private extension ShelfItem {
+extension ShelfItem {
+    /// 解析 bookmark 为 (url, bookmark) 上下文，复用 ShelfItemResolutionCache（30s TTL）。
+    /// 命中缓存时为纯内存操作；未命中时才执行 bookmark.resolveURL() 磁盘 IO。
     func resolvedContext(for bookmarkData: Data) -> (url: URL, bookmark: Data)? {
         let cache = ShelfItemResolutionCache.shared
         if let cached = cache.cachedContext(for: bookmarkData) {
@@ -336,8 +338,18 @@ private extension ShelfItem {
         }
         let bookmark = Bookmark(data: bookmarkData)
         guard let url = bookmark.resolveURL() else { return nil }
-        let context = (url, bookmark.refreshedData ?? bookmarkData)
+        let refreshedData = bookmark.refreshedData ?? bookmarkData
+        let context = (url, refreshedData)
         cache.storeContext(context, for: bookmarkData)
+        // 检测到 stale bookmark 时异步回写刷新数据到 items，
+        // 避免 bookmark 跟踪链逐渐老化导致条目最终被 cleanupInvalidItems 误删。
+        // ShelfItemResolutionCache 30s TTL 保证回写频率可控（同一 bookmark 30s 内最多一次）。
+        if bookmark.refreshedData != nil && refreshedData != bookmarkData {
+            let itemSnapshot = self
+            Task { @MainActor in
+                ShelfStateViewModel.shared.updateBookmark(for: itemSnapshot, bookmark: refreshedData)
+            }
+        }
         return context
     }
 }

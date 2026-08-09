@@ -39,7 +39,10 @@ final class NSScreenUUIDCache {
     static let shared = NSScreenUUIDCache()
     
     private var cache: [String: NSScreen] = [:]
-    private var observer: Any?
+    // nonisolated(unsafe)：observer token 仅在 MainActor 的 setupObserver 中赋值、
+    // nonisolated deinit 中移除。标 nonisolated(unsafe) 允许 deinit 安全访问
+    // （参照 DragDetector.swift 的 mouseDownMonitor 范式）。
+    private nonisolated(unsafe) var observer: Any?
     
     private init() {
         rebuildCache()
@@ -58,7 +61,9 @@ final class NSScreenUUIDCache {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.rebuildCache()
+            // observer 闭包是 nonisolated 上下文（即使 queue: .main），
+            // 调用 @MainActor 方法需用 Task hop（参照 DropNestApp 中 observer 范式）
+            Task { @MainActor in self?.rebuildCache() }
         }
     }
     

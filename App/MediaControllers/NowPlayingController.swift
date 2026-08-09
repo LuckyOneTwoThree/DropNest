@@ -97,6 +97,9 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
     }
 
     // MARK: - Update Methods
+    /// @MainActor 隔离：playbackState 的读写都在主线程执行，消除数据竞争。
+    /// processJSONStream 在后台 Task 中 await 调用本方法，会自动 hop 到 MainActor。
+    @MainActor
     private func handleAdapterUpdate(_ update: NowPlayingUpdate) async {
         let payload = update.payload
         let diff = update.diff ?? false
@@ -146,7 +149,8 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
             (diff ? self.playbackState.bundleIdentifier : "")
         )
 
-        await MainActor.run { self.playbackState = newPlaybackState }
+        // handleAdapterUpdate 标 @MainActor，读写 playbackState 都在主线程，无数据竞争。
+        playbackState = newPlaybackState
     }
 }
 

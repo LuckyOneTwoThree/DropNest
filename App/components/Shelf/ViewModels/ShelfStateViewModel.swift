@@ -26,10 +26,33 @@ final class ShelfStateViewModel: ObservableObject {
     static let shared = ShelfStateViewModel()
 
     @Published private(set) var items: [ShelfItem] = [] {
-        didSet { ShelfPersistenceService.shared.save(items) }
+        didSet {
+            // 总是重建分组缓存，确保 groupedItems 与 items 同步
+            rebuildGroupedItems()
+            // 首次后台加载完成前的赋值不触发 save：避免加载失败时空数组写盘覆盖原有数据，
+            // 也避免加载成功后立即触发一次无谓的防抖 save（内容与磁盘一致）。
+            guard !isInitialLoading else { return }
+            ShelfPersistenceService.shared.save(items)
+        }
     }
 
     @Published var isLoading: Bool = false
+
+    /// 按组ID分组的条目缓存。items didSet 时一次性分组，body 路径 O(1) 字典查找，
+    /// 避免每次 FloatingNestRootView.body 重估都全量 filter（O(nest×items)）。
+    @Published private(set) var groupedItems: [UUID: [ShelfItem]] = [:]
+
+    /// 首次后台加载标志：init 中置 true，加载完成回主线程赋值前置 false。
+    /// 期间所有 items 赋值都不触发持久化。
+    private var isInitialLoading = true
+
+    private func rebuildGroupedItems() {
+        groupedItems.removeAll(keepingCapacity: true)
+        for item in items {
+            guard let groupID = item.groupID else { continue }
+            groupedItems[groupID, default: []].append(item)
+        }
+    }
 
     /// 就地展开查看的集合（会话内状态，不持久化）
     @Published private(set) var expandedGroupIDs: Set<UUID> = []
@@ -110,13 +133,24 @@ final class ShelfStateViewModel: ObservableObject {
         // deleteGroup 由 FloatingNestManager.deleteGroup 调用，面板已在那里关闭
     }
 
-    /// 按组取条目（保持 Shelf 顺序）
+    /// 按组取条目（保持 Shelf 顺序）。O(1) 字典查找，避免全量 filter。
     func items(inGroup groupID: UUID) -> [ShelfItem] {
-        items.filter { $0.groupID == groupID }
+        groupedItems[groupID] ?? []
     }
 
     private init() {
-        items = ShelfPersistenceService.shared.load()
+        // 后台加载，避免大 JSON 反序列化阻塞主线程启动。
+        // load(from:) 是纯函数，可安全在 detached task 执行。
+        // 仿 ClipboardHistoryStore 范式：解码完成后回主线程赋值。
+        let url = ShelfPersistenceService.shared.fileURL
+        Task.detached(priority: .utility) { [weak self] in
+            let loaded = ShelfPersistenceService.load(from: url)
+            await MainActor.run {
+                guard let self else { return }
+                self.items = loaded
+                self.isInitialLoading = false
+            }
+        }
     }
 
 
@@ -195,25 +229,31 @@ final class ShelfStateViewModel: ObservableObject {
             return
         }
         isLoading = true
-        Task { [weak self] in
-            var dropped = await ShelfDropService.items(from: providers)
+        // Task.detached 确保文件 I/O（TemporaryFileStorageService.createTempFile 的
+        // FileManager.createDirectory + data.write）在后台线程执行，不阻塞主线程。
+        // 结构化 Task 会继承 @MainActor 隔离，导致 withCheckedContinuation 闭包在主线程同步执行。
+        // 用 let 绑定 dropped，MainActor.run 的 @Sendable 闭包只捕获不可变值，避免
+        // "reference to captured var in concurrently-executing code" 警告。
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let dropped = await ShelfDropService.items(from: providers)
             await MainActor.run {
                 guard !dropped.isEmpty else {
                     self?.isLoading = false
                     completion?()
                     return
                 }
+                var finalDropped = dropped
                 if let groupID {
                     // v2：拖入既有巢 → 本批条目继承该巢 groupID（成组为默认语义）
-                    for i in dropped.indices { dropped[i].groupID = groupID }
-                } else if dropped.count > 1 && Defaults[.nestAutoGroupOnBatchDrop] {
+                    for i in finalDropped.indices { finalDropped[i].groupID = groupID }
+                } else if finalDropped.count > 1 && Defaults[.nestAutoGroupOnBatchDrop] {
                     // 刘海 Shelf 批量拖入仍可走独立开关
                     let gid = UUID()
-                    for i in dropped.indices { dropped[i].groupID = gid }
+                    for i in finalDropped.indices { finalDropped[i].groupID = gid }
                 }
                 // A successful shelf deposit marks the most recent activity.
                 NotchTabPreference.lastActivity = .shelfDeposit
-                self?.add(dropped)
+                self?.add(finalDropped)
                 self?.isLoading = false
                 completion?()
             }
@@ -242,11 +282,14 @@ final class ShelfStateViewModel: ObservableObject {
             for item in invalid {
                 item.cleanupStoredData()
             }
+            // 转为不可变 let，避免在 MainActor.run 的 @Sendable 闭包中引用 captured var
+            let finalInvalidIDs = invalidIDs
+            let finalInvalid = invalid
             // 用失效 id 集合过滤当前 items（而非快照），保留并发增删期间的新增项
             await MainActor.run {
-                self?.items.removeAll { invalidIDs.contains($0.id) }
+                self?.items.removeAll { finalInvalidIDs.contains($0.id) }
                 // 关闭因清理而变空的桌面巢
-                let affectedGroupIDs = Set(invalid.compactMap { $0.groupID })
+                let affectedGroupIDs = Set(finalInvalid.compactMap { $0.groupID })
                 for gid in affectedGroupIDs where !(self?.items.contains(where: { $0.groupID == gid }) ?? false) {
                     self?.expandedGroupIDs.remove(gid)
                     Task { @MainActor in
@@ -260,12 +303,13 @@ final class ShelfStateViewModel: ObservableObject {
 
     func resolveAndUpdateBookmark(for item: ShelfItem) -> URL? {
         guard case .file(let bookmarkData) = item.kind else { return nil }
-        let bookmark = Bookmark(data: bookmarkData)
-        let result = bookmark.resolve()
-        if let refreshed = result.refreshedData, refreshed != bookmarkData {
+        // 复用 ShelfItemResolutionCache（30s TTL），避免每次拖拽/分享/打开都同步 resolve 阻塞主线程。
+        // resolvedContext 命中缓存时为纯内存操作；未命中时才执行 bookmark.resolveURL()。
+        guard let context = item.resolvedContext(for: bookmarkData) else { return nil }
+        if context.bookmark != bookmarkData {
             NSLog("Bookmark for \(item) stale; refreshing")
-            updateBookmark(for: item, bookmark: refreshed)
+            updateBookmark(for: item, bookmark: context.bookmark)
         }
-        return result.url
+        return context.url
     }
 }

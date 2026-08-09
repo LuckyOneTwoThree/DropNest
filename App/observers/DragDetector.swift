@@ -65,57 +65,65 @@ final class DragDetector {
 
         // Track pasteboard to detect content drag
         mouseDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] _ in
-            guard let self = self else { return }
-            self.pasteboardChangeCount = self.dragPasteboard.changeCount
-            self.isDragging = true
-            self.isContentDragging = false
-            self.hasEnteredNotchRegion = false
+            // NSEvent global monitor handler 是 @Sendable 闭包（nonisolated），但回调在主线程 RunLoop 派发。
+            // MainActor.assumeIsolated 向编译器声明隔离，零运行时开销，避免高频拖拽事件分配 Task。
+            MainActor.assumeIsolated {
+                guard let self = self else { return }
+                self.pasteboardChangeCount = self.dragPasteboard.changeCount
+                self.isDragging = true
+                self.isContentDragging = false
+                self.hasEnteredNotchRegion = false
+            }
         }
 
         // Track drag movement and notch region intersection
         mouseDraggedMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDragged]) { [weak self] event in
-            guard let self = self else { return }
-            guard self.isDragging else { return }
+            MainActor.assumeIsolated {
+                guard let self = self else { return }
+                guard self.isDragging else { return }
 
-            let mouseLocation = NSEvent.mouseLocation
-            let newContent = self.dragPasteboard.changeCount != self.pasteboardChangeCount
+                let mouseLocation = NSEvent.mouseLocation
+                let newContent = self.dragPasteboard.changeCount != self.pasteboardChangeCount
 
-            // Detect if actual content is being dragged AND it's valid content
-            if newContent && !self.isContentDragging && self.hasValidDragContent() {
-                self.isContentDragging = true
-                // v2.1：内容拖拽开始 → 通知巢群管理器创建空巢胚
-                self.onContentDragStart?(mouseLocation)
-            }
+                // Detect if actual content is being dragged AND it's valid content
+                if newContent && !self.isContentDragging && self.hasValidDragContent() {
+                    self.isContentDragging = true
+                    // v2.1：内容拖拽开始 → 通知巢群管理器创建空巢胚
+                    self.onContentDragStart?(mouseLocation)
+                }
 
-            // Only process position when content is being dragged
-            if self.isContentDragging {
-                self.onDragMove?(mouseLocation)
+                // Only process position when content is being dragged
+                if self.isContentDragging {
+                    self.onDragMove?(mouseLocation)
 
-                // Track notch region entry/exit
-                let containsMouse = self.notchRegion.contains(mouseLocation)
-                if containsMouse && !self.hasEnteredNotchRegion {
-                    self.hasEnteredNotchRegion = true
-                    self.onDragEntersNotchRegion?()
-                } else if !containsMouse && self.hasEnteredNotchRegion {
-                    self.hasEnteredNotchRegion = false
-                    self.onDragExitsNotchRegion?()
+                    // Track notch region entry/exit
+                    let containsMouse = self.notchRegion.contains(mouseLocation)
+                    if containsMouse && !self.hasEnteredNotchRegion {
+                        self.hasEnteredNotchRegion = true
+                        self.onDragEntersNotchRegion?()
+                    } else if !containsMouse && self.hasEnteredNotchRegion {
+                        self.hasEnteredNotchRegion = false
+                        self.onDragExitsNotchRegion?()
+                    }
                 }
             }
         }
 
         mouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { [weak self] _ in
-            guard let self = self else { return }
-            guard self.isDragging else { return }
+            MainActor.assumeIsolated {
+                guard let self = self else { return }
+                guard self.isDragging else { return }
 
-            let wasContentDragging = self.isContentDragging
-            self.isDragging = false
-            self.isContentDragging = false
-            self.hasEnteredNotchRegion = false
-            self.pasteboardChangeCount = -1
-            self.onDragEnd?()
-            // v2.1：内容拖拽结束 → 通知巢群管理器清理空巢胚
-            if wasContentDragging {
-                self.onContentDragEnd?()
+                let wasContentDragging = self.isContentDragging
+                self.isDragging = false
+                self.isContentDragging = false
+                self.hasEnteredNotchRegion = false
+                self.pasteboardChangeCount = -1
+                self.onDragEnd?()
+                // v2.1：内容拖拽结束 → 通知巢群管理器清理空巢胚
+                if wasContentDragging {
+                    self.onContentDragEnd?()
+                }
             }
         }
     }

@@ -138,7 +138,10 @@ class NotchViewCoordinator: ObservableObject {
     // MARK: - HUD replacement 订阅
 
     @Default(.hudReplacement) var hudReplacement
-    private var accessibilityObserver: Any?
+    // nonisolated(unsafe)：observer token 仅在 MainActor 的 setup 中赋值、
+    // nonisolated deinit 中移除。标 nonisolated(unsafe) 允许 deinit 安全访问
+    // （参照 DragDetector.swift 的 mouseDownMonitor 范式）。
+    private nonisolated(unsafe) var accessibilityObserver: Any?
     private var hudReplacementCancellable: AnyCancellable?
     private var hudEnableTask: Task<Void, Never>?
 

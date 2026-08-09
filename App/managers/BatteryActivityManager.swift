@@ -79,12 +79,15 @@ class BatteryActivityManager {
             return
         }
         batterySource = powerSource
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), powerSource, .defaultMode)
+        // 使用 .commonModes 而非 .defaultMode：滚动列表、跟踪菜单、模态对话框时
+        // runloop 切换到其他 mode，.defaultMode 下的电源事件不投递直到回到 default。
+        // .commonModes 确保插拔电源、充电状态变化在任意交互期间都能即时响应。
+        CFRunLoopAddSource(CFRunLoopGetCurrent(), powerSource, .commonModes)
     }
 
     private func stopMonitoring() {
         if let powerSource = batterySource {
-            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), powerSource, .defaultMode)
+            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), powerSource, .commonModes)
             batterySource = nil
         }
     }
