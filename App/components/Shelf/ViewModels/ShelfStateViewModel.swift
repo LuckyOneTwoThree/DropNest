@@ -105,16 +105,15 @@ final class ShelfStateViewModel: ObservableObject {
 
     /// 解散集合：组内条目 groupID 置 nil
     func dissolveGroup(_ groupID: UUID) {
+        // 先关闭桌面巢，再修改 items。避免 items 变更后面板内容闪空，
+        // 下一帧才关闭面板的视觉卡顿（与 clearAll 同一修复模式）。
+        FloatingNestManager.shared.closePanel(for: groupID)
         expandedGroupIDs.remove(groupID)
         items = items.map { item in
             guard item.groupID == groupID else { return item }
             var copy = item
             copy.groupID = nil
             return copy
-        }
-        // 解散后组不复存在，关闭对应桌面巢
-        Task { @MainActor in
-            FloatingNestManager.shared.closePanel(for: groupID)
         }
     }
 
@@ -179,6 +178,15 @@ final class ShelfStateViewModel: ObservableObject {
         guard !items.isEmpty else { return }
         let idsToRemove = Set(items.map { $0.id })
         let affectedGroupIDs = Set(items.compactMap { $0.groupID })
+        // 先关闭会变空的组对应的面板，再修改 items。
+        // 避免 items 变更后面板内容闪空，下一帧才关闭的视觉卡顿（与 clearAll 同一修复模式）。
+        for gid in affectedGroupIDs {
+            let willBeEmpty = !self.items.contains { $0.groupID == gid && !idsToRemove.contains($0.id) }
+            if willBeEmpty {
+                expandedGroupIDs.remove(gid)
+                FloatingNestManager.shared.closePanel(for: gid)
+            }
+        }
         self.items.removeAll { idsToRemove.contains($0.id) }
         // 临时文件清理在后台线程执行（cleanupStoredData 已解耦 @MainActor）
         Task.detached(priority: .utility) {
@@ -186,27 +194,22 @@ final class ShelfStateViewModel: ObservableObject {
                 item.cleanupStoredData()
             }
         }
-        // 统一检查受影响组是否已空，关闭对应桌面巢（避免残留"载入中"空巢）
-        for gid in affectedGroupIDs where !self.items.contains(where: { $0.groupID == gid }) {
-            expandedGroupIDs.remove(gid)
-            Task { @MainActor in
-                FloatingNestManager.shared.closePanel(for: gid)
-            }
-        }
     }
 
     func clearAll() {
         let removed = items
+        // 先同步关闭所有桌面巢，再清空 items。
+        // 若先 items=[] 再关面板：items 变更立即触发 SwiftUI 重绘，所有 FloatingNestPanel
+        // 内容闪空（网格清空），而 dockAll 延迟到下一帧才 panel.hide() → 用户看到面板内容
+        // 先闪空再消失的视觉卡顿。同步关闭面板后 items 变更不再重绘已关闭的面板内容。
+        // closeAllPanels 一次性清除位置记忆，符合"清空操作必须清除位置记忆"约定。
+        FloatingNestManager.shared.closeAllPanels()
         items = []
         // 临时文件清理在后台线程执行（cleanupStoredData 已解耦 @MainActor）
         Task.detached(priority: .utility) {
             for item in removed {
                 item.cleanupStoredData()
             }
-        }
-        // 清空文件架时同步关闭所有桌面悬浮巢（否则巢会一直显示"载入中"）
-        Task { @MainActor in
-            FloatingNestManager.shared.dockAll()
         }
     }
 

@@ -250,17 +250,16 @@ struct ShelfItem: Identifiable, Codable, Equatable, Hashable, Sendable {
 
 
     /// 清理临时文件（非 @MainActor，可从后台线程调用）。
+    /// 优化：非临时文件无需清理，直接 return 跳过 bookmark 解析，
+    /// 避免批量删除时 N 个非临时文件条目触发 N 次 resolvedContext
+    /// （每次可能创建 MainActor task 排队执行 updateBookmark）。
     func cleanupStoredData() {
-        guard case let .file(bookmark) = kind,
-              let context = resolvedContext(for: bookmark) else { return }
+        guard case let .file(bookmark) = kind else { return }
+        guard isTemporary else { return }
+        guard let context = resolvedContext(for: bookmark) else { return }
 
         let url = context.url
-
-        // Handle temporary files
-        if isTemporary {
-            TemporaryFileStorageService.shared.removeTemporaryFileIfNeeded(at: url)
-            return
-        }
+        TemporaryFileStorageService.shared.removeTemporaryFileIfNeeded(at: url)
     }
 }
 

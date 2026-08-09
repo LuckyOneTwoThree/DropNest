@@ -111,6 +111,15 @@ final class FloatingNestPanel: NSPanel {
         orderOut(nil)
     }
 
+    /// 断开 SwiftUI 订阅：清除 contentView 后 NSHostingView 释放，
+    /// FloatingNestRootView 的 @StateObject 订阅随之销毁。
+    /// 用于面板即将被丢弃的场景（closePanel/closeAllPanels），
+    /// 避免 items 变更时已隐藏的面板仍触发无用 SwiftUI 重绘。
+    /// 面板不会再显示时调用；dockAll 等保留面板的场景不调用。
+    @MainActor func detachContentView() {
+        contentView = nil
+    }
+
     // MARK: - 孵化
 
     /// 空巢胚孵化为正式巢：切换内容 + 弹性放大

@@ -164,6 +164,22 @@ final class FloatingNestManager {
         }
     }
 
+    /// 关闭所有桌面巢并清除全部位置记忆（用于清空文件架）。
+    /// 与 dockAll 的区别：dockAll 保留位置记忆（收起后可还原位置），
+    /// closeAllPanels 清除位置记忆（集合已不存在，位置无意义）。
+    /// 一次性清除位置记忆，避免逐个 closePanel 的 N 次 Defaults 写入。
+    func closeAllPanels() {
+        let snapshot = panels
+        panels.removeAll()
+        for (_, panel) in snapshot {
+            panel.detachContentView()
+            panel.hide()
+        }
+        if !Defaults[.nestPositions].isEmpty {
+            Defaults[.nestPositions] = [:]
+        }
+    }
+
     /// 切换单个集合的桌面巢展开/收起状态
     func toggle(groupID: UUID) {
         if let panel = panels[groupID] {
@@ -188,6 +204,7 @@ final class FloatingNestManager {
     /// 关闭指定 groupID 的桌面巢并清除位置记忆（用于解散集合/组内条目全部移除等场景）
     func closePanel(for groupID: UUID) {
         if let panel = panels[groupID] {
+            panel.detachContentView()
             panel.hide()
             panels.removeValue(forKey: groupID)
         }
@@ -200,6 +217,7 @@ final class FloatingNestManager {
     /// 删除集合：移除组内全部条目并关闭对应桌面巢
     func deleteGroup(_ groupID: UUID) {
         if let panel = panels[groupID] {
+            panel.detachContentView()
             panel.hide()
             panels.removeValue(forKey: groupID)
         }
