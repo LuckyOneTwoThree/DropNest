@@ -59,24 +59,46 @@ jobs:
           echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
           echo "Found app at: $APP_PATH"
 
-      - name: Re-sign embedded frameworks (ad-hoc)
+      - name: Re-sign entire app bundle (ad-hoc)
         # 预编译的 MediaRemoteAdapter.framework 自带原始签名与 Team ID，
-        # 与主 App 的 ad-hoc 签名（无 Team ID）不匹配，dyld 加载时会因
+        # 与主 App 的 ad-hoc 签名（无 Team ID）不匹配，dyld 加载时因
         # Team ID 不一致直接终止进程（SIGABRT, Library missing）。
-        # CODE_SIGNING_REQUIRED=NO 导致 Xcode 的 CodeSignOnCopy 未重签名 framework，
-        # 这里手动对 app bundle 内所有内嵌 framework 做 ad-hoc 重签名以消除 Team ID 差异。
+        # CODE_SIGNING_REQUIRED=NO 导致 Xcode 的 CodeSignOnCopy 未重签名 framework。
+        #
+        # 修复：codesign --deep 在新版 Xcode 已弃用且不可靠，改为：
+        # 1. 对 app bundle 内所有 framework/dylib 显式移除旧签名
+        # 2. 对每个二进制单独 ad-hoc 重签
+        # 3. 最后对整个 app bundle 做 ad-hoc 签
+        # 4. 验证签名一致性
         run: |
+          set -e
           APP_PATH="${{ steps.locate.outputs.app_path }}"
-          FRAMEWORKS_DIR="$APP_PATH/Contents/Frameworks"
-          if [ -d "$FRAMEWORKS_DIR" ]; then
-            echo "Re-signing embedded frameworks in $FRAMEWORKS_DIR"
-            find "$FRAMEWORKS_DIR" -name "*.framework" -type d | while read fw; do
-              echo "  Ad-hoc signing: $fw"
-              codesign --force --deep --sign - "$fw"
-            done
-          else
-            echo "No Frameworks directory found, skipping re-sign"
-          fi
+
+          echo "=== Before re-sign ==="
+          codesign -dvv "$APP_PATH/Contents/Frameworks/MediaRemoteAdapter.framework" 2>&1 || true
+
+          echo "=== Removing old signatures ==="
+          # 移除所有 framework 的签名
+          find "$APP_PATH/Contents/Frameworks" -name "*.framework" -type d | while read fw; do
+            echo "  Removing signature: $fw"
+            codesign --remove-signature "$fw" 2>/dev/null || true
+          done
+
+          echo "=== Re-signing frameworks (ad-hoc) ==="
+          # 对每个 framework 的可执行文件单独签名
+          find "$APP_PATH/Contents/Frameworks" -name "*.framework" -type d | while read fw; do
+            echo "  Ad-hoc signing: $fw"
+            codesign --force --sign - "$fw"
+          done
+
+          echo "=== Re-signing entire app bundle (ad-hoc) ==="
+          codesign --force --sign - "$APP_PATH"
+
+          echo "=== Verify signatures ==="
+          codesign --verify --deep --strict "$APP_PATH" 2>&1 && echo "App bundle signature OK" || echo "App bundle signature FAILED"
+          codesign -dvv "$APP_PATH/Contents/Frameworks/MediaRemoteAdapter.framework" 2>&1
+
+          echo "=== Re-sign complete ==="
 
       - name: Setup Python for dmgbuild
         uses: actions/setup-python@v5
