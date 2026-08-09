@@ -137,21 +137,22 @@ final class XPCHelperClient: NSObject {
 
     // MARK: - Screen Brightness
 
-    nonisolated func isScreenBrightnessAvailable() async -> Bool {
+    /// - Parameter displayID: 目标显示器 ID。0 = 系统主显示器（向后兼容）。
+    nonisolated func isScreenBrightnessAvailable(forDisplayID displayID: UInt32 = 0) async -> Bool {
         await withXPC(fallback: false) { proxy, reply in
-            proxy.isScreenBrightnessAvailable { reply($0) }
+            proxy.isScreenBrightnessAvailable(forDisplayID: displayID, with: reply)
         }
     }
 
-    nonisolated func currentScreenBrightness() async -> Float? {
+    nonisolated func currentScreenBrightness(forDisplayID displayID: UInt32 = 0) async -> Float? {
         await withXPC(fallback: nil) { proxy, reply in
-            proxy.currentScreenBrightness { reply($0?.floatValue) }
+            proxy.currentScreenBrightness(forDisplayID: displayID, with: { reply($0?.floatValue) })
         }
     }
 
-    nonisolated func setScreenBrightness(_ value: Float) async -> Bool {
+    nonisolated func setScreenBrightness(_ value: Float, forDisplayID displayID: UInt32 = 0) async -> Bool {
         await withXPC(fallback: false) { proxy, reply in
-            proxy.setScreenBrightness(value) { reply($0) }
+            proxy.setScreenBrightness(value, forDisplayID: displayID, with: reply)
         }
     }
 }

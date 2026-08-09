@@ -21,6 +21,15 @@ extension NSScreen {
         let uuidString = CFUUIDCreateString(nil, uuid.takeRetainedValue()) as String
         return uuidString
     }
+
+    /// 当前屏幕的 CGDirectDisplayID（取自 deviceDescription["NSScreenNumber"]）。
+    /// 用于亮度调节等需要 displayID 的 XPC 调用，避免每次都从 UUID 反查。
+    var displayID: CGDirectDisplayID {
+        guard let number = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
+            return CGMainDisplayID()
+        }
+        return CGDirectDisplayID(number.uint32Value)
+    }
     
     /// Find a screen by its UUID
     @MainActor static func screen(withUUID uuid: String) -> NSScreen? {

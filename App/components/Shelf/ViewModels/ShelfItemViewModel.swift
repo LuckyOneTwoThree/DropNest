@@ -852,12 +852,13 @@ final class ShelfItemViewModel: ObservableObject {
         private func showRenameDialog(for item: ShelfItem) {
             guard case let .file(bookmarkData) = item.kind else { return }
             // 后台解析 bookmark，避免主线程同步 IO
-            Task.detached(priority: .userInitiated) { [weak self] in
+            // detached task 内不引用 self（savePanel 完成回调用 ShelfStateViewModel.shared），
+            // 无需 [weak self] 捕获，避免 captured var 警告。
+            Task.detached(priority: .userInitiated) {
                 let bookmark = Bookmark(data: bookmarkData)
                 guard let fileURL = bookmark.resolveURL() else { return }
                 // 回主线程创建 NSSavePanel（AppKit 要求主线程）
                 await MainActor.run {
-                    guard let self else { return }
                     // Start security-scoped access and keep it active until rename completes.
                     let didStart = fileURL.startAccessingSecurityScopedResource()
 

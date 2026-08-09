@@ -74,13 +74,14 @@ class DropNestXPCHelper: NSObject, DropNestXPCHelperProtocol {
 
     // MARK: - 屏幕亮度 (DisplayServices 私有框架 + IOKit 回退)
 
-    @objc func isScreenBrightnessAvailable(with reply: @escaping (Bool) -> Void) {
+    @objc func isScreenBrightnessAvailable(forDisplayID displayID: UInt32, with reply: @escaping (Bool) -> Void) {
+        let resolvedID = displayID != 0 ? displayID : CGMainDisplayID()
         var b: Float = 0
-        if displayServicesGetBrightness(displayID: CGMainDisplayID(), out: &b) {
+        if displayServicesGetBrightness(displayID: resolvedID, out: &b) {
             reply(true)
             return
         }
-        if let io = ioServiceFor(displayID: CGMainDisplayID()) {
+        if let io = ioServiceFor(displayID: resolvedID) {
             IOObjectRelease(io)
             reply(true)
             return
@@ -88,13 +89,14 @@ class DropNestXPCHelper: NSObject, DropNestXPCHelperProtocol {
         reply(false)
     }
 
-    @objc func currentScreenBrightness(with reply: @escaping (NSNumber?) -> Void) {
+    @objc func currentScreenBrightness(forDisplayID displayID: UInt32, with reply: @escaping (NSNumber?) -> Void) {
+        let resolvedID = displayID != 0 ? displayID : CGMainDisplayID()
         var b: Float = 0
-        if displayServicesGetBrightness(displayID: CGMainDisplayID(), out: &b) {
+        if displayServicesGetBrightness(displayID: resolvedID, out: &b) {
             reply(NSNumber(value: b))
             return
         }
-        if let io = ioServiceFor(displayID: CGMainDisplayID()) {
+        if let io = ioServiceFor(displayID: resolvedID) {
             var level: Float = 0
             if IODisplayGetFloatParameter(io, 0, kIODisplayBrightnessKey as CFString, &level) == kIOReturnSuccess {
                 IOObjectRelease(io)
@@ -106,13 +108,14 @@ class DropNestXPCHelper: NSObject, DropNestXPCHelperProtocol {
         reply(nil)
     }
 
-    @objc func setScreenBrightness(_ value: Float, with reply: @escaping (Bool) -> Void) {
+    @objc func setScreenBrightness(_ value: Float, forDisplayID displayID: UInt32, with reply: @escaping (Bool) -> Void) {
+        let resolvedID = displayID != 0 ? displayID : CGMainDisplayID()
         let clamped = max(0, min(1, value))
-        if displayServicesSetBrightness(displayID: CGMainDisplayID(), value: clamped) {
+        if displayServicesSetBrightness(displayID: resolvedID, value: clamped) {
             reply(true)
             return
         }
-        if let io = ioServiceFor(displayID: CGMainDisplayID()) {
+        if let io = ioServiceFor(displayID: resolvedID) {
             let ok = IODisplaySetFloatParameter(io, 0, kIODisplayBrightnessKey as CFString, clamped) == kIOReturnSuccess
             IOObjectRelease(io)
             reply(ok)

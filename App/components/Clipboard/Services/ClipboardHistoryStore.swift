@@ -93,6 +93,9 @@ final class ClipboardHistoryStore: ObservableObject {
     /// 主线程只承担去重判定与 items 数组变更。
     /// 通过 insertChain 串行化：新 task 等待前一个完成后再执行，保证 finishInsert
     /// 按提交顺序执行（而非完成顺序），避免快速连续复制时历史顺序颠倒。
+    ///
+    /// 优化：先在后台计算 hash，回主线程判重，命中则跳过 blob 写盘（避免"写盘→判重→删盘"
+    /// 的无效 I/O）。仅未命中时才再次切回后台执行 blob 写盘。
     func insert(_ capture: CapturedContent) {
         NotchTabPreference.lastActivity = .copy
         let blobsDir = blobsDirectory
@@ -109,7 +112,7 @@ final class ClipboardHistoryStore: ObservableObject {
                 imageData = png
             }
 
-            // SHA256 哈希（后台；大图可达 10MB）
+            // SHA256 哈希（后台；大图可达 10MB）。仅依赖内存数据，计算快。
             let hash = ClipboardItem.makeHash(
                 text: capture.text,
                 imageData: imageData,
@@ -117,7 +120,27 @@ final class ClipboardHistoryStore: ObservableObject {
                 linkURL: capture.linkURL
             )
 
-            // blob 写盘（后台）。若主线程判重命中，这些文件会被立即删除。
+            // 先回主线程判重：命中则 bump 既有条目并终止流程，彻底跳过 blob 写盘。
+            // 重复复制同一张图时省去"写盘→删盘"的无效 SSD I/O。
+            // 每个 MainActor.run 闭包自己 [weak self] 捕获，避免引用外层 captured var
+            // 触发 "Reference to captured var 'self' in concurrently-executing code" 警告。
+            let isDuplicate: Bool = await MainActor.run { [weak self] in
+                guard let self else { return false }
+                return self.items.contains { $0.contentHash == hash }
+            }
+            if isDuplicate {
+                let bumped = await MainActor.run { [weak self] in
+                    self?.makeBumpedItem(hash: hash)
+                }
+                if let bumped {
+                    await MainActor.run { [weak self] in
+                        self?.applyBumpedItem(bumped, hash: hash)
+                    }
+                }
+                return
+            }
+
+            // 未命中：执行 blob 写盘（后台）。
             // RTF/HTML 大载荷落盘，避免 base64 内联 items.json 常驻内存（各可达 10MB）；
             // 小载荷（< 4KB）直接内联到 JSON，避免为微小格式化文本创建独立 blob 文件
             // （文件系统元数据开销 > 数据本身）。图片始终落盘（截图类体积大）。
@@ -157,6 +180,23 @@ final class ClipboardHistoryStore: ObservableObject {
             )
             await self?.finishInsert(item)
         }
+    }
+
+    /// 判重命中时构造 bump 后的条目（主线程）
+    private func makeBumpedItem(hash: String) -> (ClipboardItem, Int)? {
+        guard let index = items.firstIndex(where: { $0.contentHash == hash }) else { return nil }
+        var bumped = items.remove(at: index)
+        bumped.lastCopiedAt = Date()
+        bumped.copyCount += 1
+        return (bumped, index)
+    }
+
+    /// 判重命中时应用 bump（主线程）
+    private func applyBumpedItem(_ pair: (ClipboardItem, Int), hash: String) {
+        let (bumped, _) = pair
+        items.insert(bumped, at: 0)
+        currentContentHash = hash
+        scheduleSave()
     }
 
     /// 主线程收尾：去重 / 插入 / 修剪 / 调度保存
@@ -328,7 +368,6 @@ final class ClipboardHistoryStore: ObservableObject {
                 try Task.checkCancellation()
                 // 每次保存用独立 encoder：后台线程不复用共享实例，规避并发风险
                 let encoder = JSONEncoder()
-                encoder.outputFormatting = [.prettyPrinted]
                 encoder.dateEncodingStrategy = .iso8601
                 let data = try encoder.encode(snapshot)
                 try Task.checkCancellation()
@@ -346,7 +385,6 @@ final class ClipboardHistoryStore: ObservableObject {
         saveTask?.cancel()
         do {
             let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted]
             encoder.dateEncodingStrategy = .iso8601
             let data = try encoder.encode(items)
             try data.write(to: fileURL, options: .atomic)

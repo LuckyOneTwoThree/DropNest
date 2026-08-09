@@ -16,19 +16,32 @@ final class BrightnessManager: ObservableObject {
 
     var shouldShowOverlay: Bool { Date().timeIntervalSince(lastChangeAt) < visibleDuration }
 
+    /// 当前选中屏幕的 displayID。多显示器环境下亮度调节作用于用户实际操作的屏幕，
+    /// 而非硬编码的主显示器。选中屏幕由 NotchViewCoordinator 管理（刘海窗口所在屏幕）。
+    /// 找不到选中屏幕时回退到 0（XPC Helper 内部再回退到 CGMainDisplayID）。
+    private var currentDisplayID: UInt32 {
+        let uuid = NotchViewCoordinator.shared.selectedScreenUUID
+        if let screen = NSScreen.screen(withUUID: uuid) {
+            return screen.displayID
+        }
+        return 0
+    }
+
     func refresh() {
+        let displayID = currentDisplayID
         Task { @MainActor in
-            if let current = await client.currentScreenBrightness() {
+            if let current = await client.currentScreenBrightness(forDisplayID: displayID) {
                 publish(brightness: current, touchDate: false)
             }
         }
     }
 
     @MainActor func setRelative(delta: Float) {
+        let displayID = currentDisplayID
         Task { @MainActor in
-            let starting = await client.currentScreenBrightness() ?? rawBrightness
+            let starting = await client.currentScreenBrightness(forDisplayID: displayID) ?? rawBrightness
             let target = max(0, min(1, starting + delta))
-            let ok = await client.setScreenBrightness(target)
+            let ok = await client.setScreenBrightness(target, forDisplayID: displayID)
             if ok {
                 publish(brightness: target, touchDate: true)
                 NotchViewCoordinator.shared.toggleSneakPeek(status: true, type: .brightness, value: CGFloat(target))
@@ -41,8 +54,9 @@ final class BrightnessManager: ObservableObject {
 
     func setAbsolute(value: Float) {
         let clamped = max(0, min(1, value))
+        let displayID = currentDisplayID
         Task { @MainActor in
-            let ok = await client.setScreenBrightness(clamped)
+            let ok = await client.setScreenBrightness(clamped, forDisplayID: displayID)
             if ok {
                 publish(brightness: clamped, touchDate: true)
             } else {

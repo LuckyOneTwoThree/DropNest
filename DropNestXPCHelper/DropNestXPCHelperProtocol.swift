@@ -9,7 +9,10 @@ import Foundation
     func setKeyboardBrightness(_ value: Float, with reply: @escaping (Bool) -> Void)
 
     // MARK: - 屏幕亮度 (DisplayServices 私有框架 + IOKit 回退)
-    func isScreenBrightnessAvailable(with reply: @escaping (Bool) -> Void)
-    func currentScreenBrightness(with reply: @escaping (NSNumber?) -> Void)
-    func setScreenBrightness(_ value: Float, with reply: @escaping (Bool) -> Void)
+    /// - Parameter displayID: 目标显示器 ID（CGDirectDisplayID）。主 App 传入当前选中屏幕的 displayID，
+    ///   使多显示器环境下亮度调节作用于用户实际操作的屏幕，而非硬编码的主显示器。
+    ///   displayID=0 时回退到 CGMainDisplayID()（保持向后兼容）。
+    func isScreenBrightnessAvailable(forDisplayID displayID: UInt32, with reply: @escaping (Bool) -> Void)
+    func currentScreenBrightness(forDisplayID displayID: UInt32, with reply: @escaping (NSNumber?) -> Void)
+    func setScreenBrightness(_ value: Float, forDisplayID displayID: UInt32, with reply: @escaping (Bool) -> Void)
 }

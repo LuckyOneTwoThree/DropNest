@@ -49,7 +49,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowScreenDidChangeObserver: Any?
     /// 闭包式 NotificationCenter observer token 集中存放，退出时统一注销
     private var notificationObservers: [Any] = []
-    private var dragDetectors: [String: DragDetector] = [:] // UUID -> DragDetector
+    /// DragDetector 回调是否已安装（单例回调只需安装一次，屏幕变化时仅 updateNotchRegions）
+    private var dragDetectorCallbacksInstalled = false
     private var windowObservers: [NSWindow: Any] = [:] // NSWindow -> Observer Token
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -170,58 +171,74 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func cleanupDragDetectors() {
-        dragDetectors.values.forEach { detector in
-            detector.stopMonitoring()
-        }
-        dragDetectors.removeAll()
+        // 单例模式下只需停止监视器；回调闭包随单例存活，无需清空。
+        DragDetector.shared.stopMonitoring()
     }
 
+    /// DragDetector 已单例化：多屏共享一组 NSEvent global monitor（而非每屏一组），
+    /// 内部维护 [UUID: CGRect] 热区字典，一次事件判断所有屏幕区域。
+    /// 避免多屏时每次鼠标移动被系统派发 N 遍闭包。
     private func setupDragDetectors() {
-        cleanupDragDetectors()
+        // 回调只需安装一次（单例存活期不变）；屏幕变化时仅刷新热区并重启监视器。
+        if !dragDetectorCallbacksInstalled {
+            installDragDetectorCallbacks()
+            dragDetectorCallbacksInstalled = true
+        }
 
-        guard Defaults[.expandedDragDetection] else { return }
+        // 关闭扩展检测时停止监视器，避免空热区下无效事件派发。
+        guard Defaults[.expandedDragDetection] else {
+            DragDetector.shared.stopMonitoring()
+            return
+        }
 
+        // 构建多屏刘海热区字典：UUID -> notchRegion
+        var regions: [String: CGRect] = [:]
         if Defaults[.showOnAllDisplays] {
             for screen in NSScreen.screens {
-                setupDragDetectorForScreen(screen)
+                if let uuid = screen.displayUUID {
+                    regions[uuid] = notchRegion(for: screen)
+                }
             }
         } else {
             let preferredScreen: NSScreen? = window?.screen
                 ?? NSScreen.screen(withUUID: coordinator.selectedScreenUUID)
                 ?? NSScreen.main
-
-            if let screen = preferredScreen {
-                setupDragDetectorForScreen(screen)
+            if let screen = preferredScreen, let uuid = screen.displayUUID {
+                regions[uuid] = notchRegion(for: screen)
             }
         }
+
+        DragDetector.shared.updateNotchRegions(regions)
+        DragDetector.shared.startMonitoring()
     }
 
-    private func setupDragDetectorForScreen(_ screen: NSScreen) {
-        guard let uuid = screen.displayUUID else { return }
-
+    /// 计算指定屏幕顶部居中的刘海热区（开放态刘海占据的区域）
+    private func notchRegion(for screen: NSScreen) -> CGRect {
         let screenFrame = screen.frame
         let notchHeight = openNotchSize.height
         let notchWidth = openNotchSize.width
-
-        // Create notch region at the top-center of the screen where an open notch would occupy
-        let notchRegion = CGRect(
+        return CGRect(
             x: screenFrame.midX - notchWidth / 2,
             y: screenFrame.maxY - notchHeight,
             width: notchWidth,
             height: notchHeight
         )
+    }
 
-        let detector = DragDetector(notchRegion: notchRegion)
+    /// 安装单例 DragDetector 的回调（仅一次）。回调内通过 screenUUID 定位目标屏幕。
+    private func installDragDetectorCallbacks() {
+        let detector = DragDetector.shared
 
-        detector.onDragEntersNotchRegion = { [weak self] in
+        // 进入某屏幕刘海区域：参数为该屏幕 UUID
+        detector.onDragEntersNotchRegion = { [weak self] screenUUID in
             Task { @MainActor in
-                self?.handleDragEntersNotchRegion(onScreen: screen)
+                self?.handleDragEntersNotchRegion(screenUUID: screenUUID)
             }
         }
 
-        // 摇晃召唤悬浮暂存框（R2）：拖拽移动采样喂入检测器；离开刘海区域/拖拽结束时重置
+        // 摇晃召唤悬浮暂存框（R2）：拖拽移动采样喂入检测器；离开刘海区域/拖拽结束时重置。
         // DragDetector 已是 @MainActor，这里同步喂样本：
-        // 既省掉每次移动事件的 Task 分配，也保证采样时间戳取自事件发生时刻而非调度时刻
+        // 既省掉每次移动事件的 Task 分配，也保证采样时间戳取自事件发生时刻而非调度时刻。
         detector.onDragMove = { point in
             ShakeGestureDetector.shared.feed(point)
         }
@@ -250,21 +267,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 ShakeGestureDetector.shared.reset()
             }
         }
-
-        dragDetectors[uuid] = detector
-        detector.startMonitoring()
     }
 
-    private func handleDragEntersNotchRegion(onScreen screen: NSScreen) {
-        guard let uuid = screen.displayUUID else { return }
-
+    private func handleDragEntersNotchRegion(screenUUID: String) {
         // A drag into the notch is a shelf-deposit intent: always show the shelf tab.
-        if Defaults[.showOnAllDisplays], let viewModel = viewModels[uuid] {
+        if Defaults[.showOnAllDisplays], let viewModel = viewModels[screenUUID] {
             viewModel.openTab = .shelf
             viewModel.open()
-        } else if !Defaults[.showOnAllDisplays], let windowScreen = window?.screen, screen == windowScreen {
-            vm.openTab = .shelf
-            vm.open()
+        } else if !Defaults[.showOnAllDisplays] {
+            // 单屏模式：仅当命中屏幕与当前窗口所在屏幕一致时才打开
+            if let windowScreen = window?.screen, windowScreen.displayUUID == screenUUID {
+                vm.openTab = .shelf
+                vm.open()
+            }
         }
     }
 
@@ -322,14 +337,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - 单实例保护
 
+    /// 单实例广播通知名。用 NSDistributedNotificationCenter 跨进程广播，
+    /// 新实例启动时发送"Die"通知，旧实例监听到后自行 terminate。
+    /// 相比 NSRunningApplication.terminate() 的 AppleEvent 方式，
+    /// NSDistributedNotificationCenter 在沙盒环境下可靠（无需 scripting-targets 权限）。
+    private static let singleInstanceDieName = "DropNestSingleInstanceDie"
+
     /// 终止同 bundle id 的其他运行实例，保留当前（最新）实例。
     /// 防止多实例并发读写同一容器内的 items.json / blobs 造成数据损坏。
     private func enforceSingleInstance() {
-        let mine = ProcessInfo.processInfo.processIdentifier
-        guard let bundleID = Bundle.main.bundleIdentifier, !bundleID.isEmpty else { return }
-        for app in NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-        where app.processIdentifier != mine {
-            app.terminate()
+        // 注册监听：旧实例收到"Die"通知后自行退出。
+        // 新实例启动时广播此通知，旧实例收到后 terminate，保留最新启动的实例。
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleDieNotification),
+            name: Notification.Name(rawValue: Self.singleInstanceDieName),
+            object: nil,
+            suspensionBehavior: .deliverImmediately
+        )
+        // 广播"Die"通知，通知其他实例退出。deliverImmediately 确保立即送达。
+        DistributedNotificationCenter.default().postNotificationName(
+            NSNotification.Name(rawValue: Self.singleInstanceDieName),
+            object: nil,
+            userInfo: ["pid": ProcessInfo.processInfo.processIdentifier],
+            deliverImmediately: true
+        )
+    }
+
+    @objc private func handleDieNotification(_ note: Notification) {
+        // 收到"Die"通知说明有新实例启动，当前（旧）实例应退出。
+        // 校验 pid：避免自己发的通知把自己杀掉。
+        if let senderPID = note.userInfo?["pid"] as? Int,
+           senderPID != ProcessInfo.processInfo.processIdentifier {
+            NSApplication.shared.terminate(self)
         }
     }
 
@@ -441,7 +481,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             FloatingNestManager.shared.start()
             FloatingNestManager.shared.onDeposit = { [weak self] screen in
                 Task { @MainActor in
-                    self?.handleDragEntersNotchRegion(onScreen: screen)
+                    guard let uuid = screen.displayUUID else { return }
+                    self?.handleDragEntersNotchRegion(screenUUID: uuid)
                 }
             }
         }

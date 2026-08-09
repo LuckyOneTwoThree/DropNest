@@ -32,7 +32,6 @@ final class ShelfPersistenceService {
             print("❌ Shelf persistence: failed to create directory \(dir.path): \(error.localizedDescription)")
         }
         fileURL = dir.appendingPathComponent("items.json")
-        encoder.outputFormatting = [.prettyPrinted]
         decoder.dateDecodingStrategy = .iso8601
         encoder.dateEncodingStrategy = .iso8601
     }
@@ -99,7 +98,6 @@ final class ShelfPersistenceService {
                 try Task.checkCancellation()
                 // 每次保存用独立 encoder：后台线程不复用共享实例，规避并发风险
                 let encoder = JSONEncoder()
-                encoder.outputFormatting = [.prettyPrinted]
                 encoder.dateEncodingStrategy = .iso8601
                 let data = try encoder.encode(items)
                 try Task.checkCancellation()

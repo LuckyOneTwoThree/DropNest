@@ -145,7 +145,7 @@ final class ShelfStateViewModel: ObservableObject {
         let url = ShelfPersistenceService.shared.fileURL
         Task.detached(priority: .utility) { [weak self] in
             let loaded = ShelfPersistenceService.load(from: url)
-            await MainActor.run {
+            await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.items = loaded
                 self.isInitialLoading = false
@@ -236,7 +236,7 @@ final class ShelfStateViewModel: ObservableObject {
         // "reference to captured var in concurrently-executing code" 警告。
         Task.detached(priority: .userInitiated) { [weak self] in
             let dropped = await ShelfDropService.items(from: providers)
-            await MainActor.run {
+            await MainActor.run { [weak self] in
                 guard !dropped.isEmpty else {
                     self?.isLoading = false
                     completion?()
@@ -286,7 +286,7 @@ final class ShelfStateViewModel: ObservableObject {
             let finalInvalidIDs = invalidIDs
             let finalInvalid = invalid
             // 用失效 id 集合过滤当前 items（而非快照），保留并发增删期间的新增项
-            await MainActor.run {
+            await MainActor.run { [weak self] in
                 self?.items.removeAll { finalInvalidIDs.contains($0.id) }
                 // 关闭因清理而变空的桌面巢
                 let affectedGroupIDs = Set(finalInvalid.compactMap { $0.groupID })
