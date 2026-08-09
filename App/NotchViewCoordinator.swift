@@ -144,6 +144,9 @@ class NotchViewCoordinator: ObservableObject {
     private nonisolated(unsafe) var accessibilityObserver: Any?
     private var hudReplacementCancellable: AnyCancellable?
     private var hudEnableTask: Task<Void, Never>?
+    /// 辅助功能授权轮询：未授权时每 2 秒检测一次，授权后 post 通知并停止。
+    /// 无此轮询时用户在系统设置授权后必须重启 App 或打开 HUD 设置页才能生效。
+    private var accessibilityPollingTask: Task<Void, Never>?
 
     // Legacy storage for migration
     @AppStorage("preferred_screen_name") private var legacyPreferredScreenName: String?
@@ -211,12 +214,15 @@ class NotchViewCoordinator: ObservableObject {
 
                             if granted {
                                 await MediaKeyInterceptor.shared.start()
+                            } else {
+                                // 未授权：启动轮询，授权后自动 start()
+                                self.startAccessibilityPolling()
                             }
-                            // 注意：未授权时不再把 hudReplacement 翻回 false，
-                            // 否则会关掉用户刚打开的开关。授权到达后由 HUDSettings
-                            // 的轮询或 accessibilityAuthorizationChanged 通知自动 start()。
                         }
                     } else {
+                        // 关闭 HUD 替换：停止拦截器与轮询
+                        self.accessibilityPollingTask?.cancel()
+                        self.accessibilityPollingTask = nil
                         MediaKeyInterceptor.shared.stop()
                     }
                 }
@@ -227,9 +233,33 @@ class NotchViewCoordinator: ObservableObject {
             if Defaults[.hudReplacement] {
                 if MediaKeyInterceptor.isAccessibilityTrusted {
                     await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
+                } else {
+                    // 未授权时不翻回 false，启动轻量级轮询检测授权变化。
+                    // macOS TCC 系统不会主动通知 App 权限状态变化，AXIsProcessTrusted()
+                    // 只在调用时返回当前状态。没有轮询的话，用户在系统设置授权后
+                    // 必须重启 App 或打开 HUD 设置页（那里有独立轮询）才能生效。
+                    // 这里每 2 秒轮询一次，检测到授权后 post 通知，上面注册的监听器
+                    // 会自动 start()，然后停止轮询。
+                    self.startAccessibilityPolling()
                 }
-                // 未授权时不翻回 false，等 accessibilityAuthorizationChanged
-                // 通知到达后自动 start()
+            }
+        }
+    }
+
+    /// 启动辅助功能授权轮询。检测到授权后 post `accessibilityAuthorizationChanged`
+    /// 通知，上面注册的监听器会自动 `MediaKeyInterceptor.shared.start()`，
+    /// 然后停止轮询。hudReplacement 关闭时也停止轮询。
+    private func startAccessibilityPolling() {
+        accessibilityPollingTask?.cancel()
+        accessibilityPollingTask = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                if Task.isCancelled { return }
+                guard Defaults[.hudReplacement] else { return }
+                if MediaKeyInterceptor.isAccessibilityTrusted {
+                    NotificationCenter.default.post(name: .accessibilityAuthorizationChanged, object: nil)
+                    return
+                }
             }
         }
     }
