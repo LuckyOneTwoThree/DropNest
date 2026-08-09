@@ -444,7 +444,10 @@ private struct NestCell: View {
                 .frame(width: 60)
         }
         .overlay(NestCellDragHandler(item: item)) // 单个条目拖出
-        .task(id: item.id) {
+        // 用 item 整体（含 kind）作为缓存键，而非仅 item.id：
+        // bookmark 刷新时 item.id 不变但 kind 变化，用 item.id 会导致 .task 不重新执行，
+        // @State icon/displayName 永久停留在旧值（文件改名/移动后显示过期）。
+        .task(id: item) {
             icon = item.icon
             displayName = item.displayName
         }

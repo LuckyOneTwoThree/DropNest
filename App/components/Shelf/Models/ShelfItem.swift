@@ -8,7 +8,7 @@
 import AppKit
 import Foundation
 
-enum ShelfItemKind: Codable, Equatable, Sendable {
+enum ShelfItemKind: Codable, Equatable, Hashable, Sendable {
     case file(bookmark: Data)
     case text(string: String)
     case link(url: URL)
@@ -140,7 +140,7 @@ final class ShelfItemResolutionCache {
 /// 值类型本体非隔离（Codable/Equatable 可在后台线程使用，如批量 JSON 编码）。
 /// fileURL/cleanupStoredData 已解耦 ViewModel 单例，可跨 actor 调用。
 /// icon 仍标 @MainActor（NSWorkspace.shared.icon + NSImage 绘制属 AppKit 主线程惯例）。
-struct ShelfItem: Identifiable, Codable, Equatable, Sendable {
+struct ShelfItem: Identifiable, Codable, Equatable, Hashable, Sendable {
     let id: UUID
     var kind: ShelfItemKind
     var isTemporary: Bool

@@ -35,6 +35,13 @@ final class ClipboardHistoryStore: ObservableObject {
     /// 启动瞬间复制的新条目会在 finishInitialLoad 中与磁盘历史合并。
     private var didLoadFromDisk = false
 
+    /// 串行化插入链：保证提交顺序 = 完成顺序。
+    /// insert 是 @MainActor 方法，insertChain 在主线程读写无竞态；
+    /// detached task 内 await prev?.value 在后台线程等待前一个完成，不阻塞主线程。
+    /// 无此机制时，大图（TIFF→PNG ~500ms）先复制、文本（~5ms）后复制会导致文本先 finishInsert，
+    /// 大图后 finishInsert 插到 index 0，历史顺序颠倒（违反"最新在上"语义）。
+    private var insertChain: Task<Void, Never>?
+
     private init() {
         let fm = FileManager.default
         let support = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
@@ -84,10 +91,16 @@ final class ClipboardHistoryStore: ObservableObject {
 
     /// 入口（@MainActor）：重活（TIFF→PNG、SHA256、blob 写盘）全部在后台线程完成，
     /// 主线程只承担去重判定与 items 数组变更。
+    /// 通过 insertChain 串行化：新 task 等待前一个完成后再执行，保证 finishInsert
+    /// 按提交顺序执行（而非完成顺序），避免快速连续复制时历史顺序颠倒。
     func insert(_ capture: CapturedContent) {
         NotchTabPreference.lastActivity = .copy
         let blobsDir = blobsDirectory
-        Task.detached(priority: .utility) { [weak self] in
+        let prev = insertChain
+        insertChain = Task.detached(priority: .utility) { [weak self] in
+            // 等待前一个 insert 完成，保证提交顺序 = 完成顺序。
+            // await 在后台线程等待，不阻塞主线程。
+            _ = await prev?.value
             // TIFF → PNG 转换（后台；截图类内容的最高开销环节）
             var imageData = capture.imageData
             if imageData == nil, let tiff = capture.tiffData,
