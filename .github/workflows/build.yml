@@ -1,1 +1,140 @@
-bmFtZTogQnVpbGQgJiBSZWxlYXNlCgojIOaJk+WMhSBEcm9wTmVzdC5hcHAg5Li6IERNRyDlubblj5HluIPliLAgR2l0SHViIFJlbGVhc2Vz44CCCiMKIyDop6blj5HmnaHku7bvvJoKIyAgIDEuIHB1c2ggdGFnIHYqIOKGkiDmnoTlu7rlubbliJvlu7ogUmVsZWFzZQojICAgMi4g5omL5Yqo6Kem5Y+R77yIQWN0aW9ucyDihpIgUnVuIHdvcmtmbG9377yJ4oaSIOS7heaehOW7uu+8jOS4iuS8oCBhcnRpZmFjdAojCiMg562+5ZCN6K+05piO77yaQ0kg5peg5byA5Y+R6ICF6LSm5Y+377yM5L2/55SoIGFkLWhvYyDnrb7lkI3vvIhDT0RFX1NJR05fSURFTlRJVFk9Ii0i77yJ44CCCiMg5Lqn5Ye655qEIERNRyDmnKrlgZogQXBwbGUg5YWs6K+B77yM55So5oi36aaW5qyh5omT5byA6ZyA5omL5Yqo5Y676ZqU56a75bGe5oCn77yI6KeBIFJlbGVhc2Ug6K+05piO77yJ44CCCiMg5q2j5byP562+5ZCNK+WFrOivgeeJiOacrOivt+eUqOacrOWcsOW8gOWPkeiAhei0puWPt+aehOW7uuOAggoKb246CiAgcHVzaDoKICAgIHRhZ3M6IFsndionXQogIHdvcmtmbG93X2Rpc3BhdGNoOgoKcGVybWlzc2lvbnM6CiAgY29udGVudHM6IHdyaXRlICAjIOWIm+W7uiBSZWxlYXNlIOmcgOimgQoKam9iczoKICBidWlsZDoKICAgIG5hbWU6IEJ1aWxkIERNRwogICAgcnVucy1vbjogbWFjb3MtbGF0ZXN0CiAgICB0aW1lb3V0LW1pbnV0ZXM6IDMwCgogICAgc3RlcHM6CiAgICAgIC0gbmFtZTogQ2hlY2tvdXQKICAgICAgICB1c2VzOiBhY3Rpb25zL2NoZWNrb3V0QHY0CgogICAgICAtIG5hbWU6IFNob3cgZW52aXJvbm1lbnQKICAgICAgICBydW46IHwKICAgICAgICAgIHhjb2RlYnVpbGQgLXZlcnNpb24KICAgICAgICAgIHN3aWZ0IC0tdmVyc2lvbgoKICAgICAgLSBuYW1lOiBCdWlsZCBhcHAgKGFkLWhvYyBzaWduZWQpCiAgICAgICAgcnVuOiB8CiAgICAgICAgICB4Y29kZWJ1aWxkIFwKICAgICAgICAgICAgLXByb2plY3QgRHJvcE5lc3QueGNvZGVwcm9qIFwKICAgICAgICAgICAgLXNjaGVtZSBEcm9wTmVzdCBcCiAgICAgICAgICAgIC1jb25maWd1cmF0aW9uIFJlbGVhc2UgXAogICAgICAgICAgICAtZGVyaXZlZERhdGFQYXRoIGJ1aWxkIFwKICAgICAgICAgICAgLWRlc3RpbmF0aW9uICdnZW5lcmljL3BsYXRmb3JtPW1hY09TJyBcCiAgICAgICAgICAgIGJ1aWxkIFwKICAgICAgICAgICAgQ09ERV9TSUdOX0lERU5USVRZPSItIiBcCiAgICAgICAgICAgIENPREVfU0lHTklOR19SRVFVSVJFRD1OTyBcCiAgICAgICAgICAgIENPREVfU0lHTklOR19BTExPV0VEPVlFUyBcCiAgICAgICAgICAgIERFVkVMT1BNRU5UX1RFQU09IiIgXAogICAgICAgICAgICBQUk9WSVNJT05JTkdfUFJPRklMRV9TUEVDSUZJRVI9IiIKCiAgICAgIC0gbmFtZTogTG9jYXRlIC5hcHAgYnVuZGxlCiAgICAgICAgaWQ6IGxvY2F0ZQogICAgICAgIHJ1bjogfAogICAgICAgICAgQVBQX1BBVEg9IiQoZmluZCBidWlsZC9CdWlsZC9Qcm9kdWN0cyAtbmFtZSAnRHJvcE5lc3QuYXBwJyAtdHlwZSBkIHwgaGVhZCAtMSkiCiAgICAgICAgaWYgWyAteiAiJEFQUF9QQVRIIiBdOyB0aGVuCiAgICAgICAgICAgIGVjaG8gIjo6ZXJyb3I6OkRyb3BOZXN0LmFwcCBub3QgZm91bmQgaW4gYnVpbGQgb3V0cHV0IgogICAgICAgICAgICBleGl0IDEKICAgICAgICAgIGZpCiAgICAgICAgICBlY2hvICJhcHBfcGF0aD0kQVBQX1BBVEgiID4+ICIkR0lUSFVCX09VVFBVVCIKICAgICAgICAgIGVjaG8gIkZvdW5kIGFwcCBhdDogJEFQUF9QQVRIIgoKICAgICAgLSBuYW1lOiBSZS1zaWduIGVtYmVkZGVkIGZyYW1ld29ya3MgKGFkLWhvYykKICAgICAgICAjIOmihOe8lui/rueahCBNZWRpYVJlbW90ZUFkYXB0ZXIuZnJhbWV3b3JrIOiHquW4puWOn+Wni+etvuWQjeS4jiBUZWFtIElE77yMCiAgICAgICAgIyDkuI7kuLsgQXBwIOeahCBhZC1ob2Mg562+5ZCN77yI5pegIFRlYW0gSUTvvInkuI3ljLnphY3vvIxkeWxkIOWKoOi9veaXtuS8muWboAogICAgICAgICMgVGVhbSBJRCDkuI3kuIDoh7Tnm7Tmj6Xnu4jmraLpooDnv6LvvIhTSUdBQlJULCBMaWJyYXJ5IG1pc3NpbmfvvInjgIIKICAgICAgICAjIENPREVfU0lHTklOR19SRVFVSVJFRD1OTyDlr7zoh7QgWGNvZGUg55qEIENvZGVTaWduT25Db3B5IOWcqOmHjeetvuWQjeWGmeaYr+WPtywKICAgICAgICAjIOS/memHjeaJi+WKqOWvuSBhcHAgYnVuZGxlIOWGheaJgOacieeGhuWFjCBmcmFtZXdvcmsg5YGYIGFkLWhvYyDph43nrb7lkI3nu6XmtujpmaQgVGVhbSBJRCDlt67lvILjgIIKICAgICAgICBydW46IHwKICAgICAgICAgIEFQUF9QQVRIPSIke3sgc3RlcHMubG9jYXRlLm91dHB1dHMuYXBwX3BhdGggfX0iCiAgICAgICAgICBGUkFNRVdPUktTX0RJUj0iJEFQUF9QQVRTL0NvbnRlbnRzL0ZyYW1ld29ya3MiCiAgICAgICAgICBpZiBbIC1kICIkRlJBTUVXT1JLU19ESVIiIF07IHRoZW4KICAgICAgICAgICAgZWNobyAiUmUtc2lnbmluZyBlbWJlZGRlZCBmcmFtZXdvcmtzIGluICRGUkFNRVdPUktTX0RJUiIKICAgICAgICAgICAgZmluZCAiJEZSQU1FV09SS1NfRElSIiAtbmFtZSAiKi5mcmFtZXdvcmsiIC10eXBlIGQgfCB3aGlsZSByZWFkIGZ3OyBkbwogICAgICAgICAgICAgIGVjaG8gIiAgQWQtaG9jIHNpZ25pbmc6ICRmdyIKICAgICAgICAgICAgICBjb2Rlc2lnbiAtLWZvcmNlIC0tZGVlcCAtLXNpZ24gLSAiJGZ3IgogICAgICAgICAgICBkb25lCiAgICAgICAgICBlbHNlCiAgICAgICAgICAgIGVjaG8gIk5vIEZyYW1ld29ya3MgZGlyZWN0b3J5IGZvdW5kLCBza2lwcGluZyByZS1zaWduIgogICAgICAgICAgZmkKCiAgICAgIC0gbmFtZTogU2V0dXAgUHl0aG9uIGZvciBkbWdidWlsZAogICAgICAgIHVzZXM6IGFjdGlvbnMvc2V0dXAtcHl0aG9uQHY1CiAgICAgICAgd2l0aDoKICAgICAgICAgIHB5dGhvbi12ZXJzaW9uOiAnMy54JwoKICAgICAgLSBuYW1lOiBJbnN0YWxsIGRtZ2J1aWxkIChoYXNoLXBpbm5lZCkKICAgICAgICBydW46IHwKICAgICAgICAgIHB5dGhobjMgLW0gcGlwIGluc3RhbGwgLS1yZXF1aXJlLWhhc2hlcyAtciBDb25maWd1cmF0aW9uL2RtZy9yZXF1aXJlbWVudHMudHh0CgogICAgICAtIG5hbWU6IEJ1aWxkIERNRwogICAgICAgIHJ1bjogfAogICAgICAgICAgY2htb2QgK3ggLi9Db25maWd1cmF0aW9uL2RtZy9jcmVhdGVfZG1nLnNoCiAgICAgICAgICAuL0NvbmZpZ3VyYXRpb24vZG1nL2NyZWF0ZV9kbWcuc2ggXAogICAgICAgICAgICAiJHt7IHN0ZXBzLmxvY2F0ZS5vdXRwdXRzLmFwcF9wYXRoIH19IiBcCiAgICAgICAgICAgICJidWlsZC9Ecm9wTmVzdC5kbWciIFwKICAgICAgICAgICAgIkRyb3BOZXN0IgoKICAgICAgLSBuYW1lOiBSZWFkIHZlcnNpb24KICAgICAgICBpZDogdmVyc2lvbgogICAgICAgIHJ1bjogfAogICAgICAgICAgaWYgW1sgIiR7R0lUSFVCX1JFRn0iID09IHJlZnMvdGFncy8qIF1dOyB0aGVuCiAgICAgICAgICAgICAgVkVSU0lPTj0iJHtHSVRIVUJfUkVGfSNyZWZzL3RhZ3MvfSIKICAgICAgICAgIGVsc2UKICAgICAgICAgICAgVkVSU0lPTj0iZGV2LSQoZGF0ZSArJVklbSVkKS0ke0dJVEhVQl9TSEE6Ojd9IgogICAgICAgICAgZmkKICAgICAgICAgIGVjaG8gInZlcnNpb249JFZFUlNJT04iID4+ICIkR0lUSFVCX09VVFBVVCIKCiAgICAgIC0gbmFtZTogVXBsb2FkIGFydGlmYWN0CiAgICAgICAgdXNlczogYWN0aW9ucy91cGxvYWQtYXJ0aWZhY3RAdjQKICAgICAgICB3aXRoOgogICAgICAgICAgbmFtZTogRHJvcE5lc3QtJHt7IHN0ZXBzLnZlcnNpb24ub3V0cHV0cy52ZXJzaW9uIH19CiAgICAgICAgICBwYXRoOiBidWlsZC9Ecm9wTmVzdC5kbWcKICAgICAgICAgIHJldGVudGlvbi1kYXlzOiAzMAogICAgICAgICAgaWYtbm8tZmlsZXMtZm91bmQ6IGVycm9yCgogICAgICAtIG5hbWU6IENyZWF0ZSBHaXRIdWIgUmVsZWFzZQogICAgICAgIGlmOiBzdGFydHNXaXRoKGdpdGh1Yi5yZWYsICdyZWZzL3RhZ3MvdicpCiAgICAgICAgdXNlczogc29mdHByb3BzL2FjdGlvbi1naC1yZWxlYXNlQHYyCiAgICAgICAgd2l0aDoKICAgICAgICAgIGZpbGVzOiBidWlsZC9Ecm9wTmVzdC5kbWcKICAgICAgICAgIG5hbWU6IERyb3BOZXN0ICR7eyBnaXRodWIucmVmX25hbWUgfX0KICAgICAgICAgIGJvZHk6IHwKICAgICAgICAgICAgIyMgRHJvcE5lc3QgJHt7IGdpdGh1Yi5yZWZfbmFtZSB9fQoKICAgICAgICAgICAgIyMjIOWuiem huCgpOWupeaqpAoKICAgICAgICAgICAgMS4g5LiL6L29IGBEcm9wTmVzdC5kbWdgCiAgICAgICAgICAgIDIuIOWwhiBEcm9wTmVzdCDmi5blhaTjgIzluoHmlKnmiJMg5pWj5Zyo77yI5bGP6KGM57q/5oiQ6ICF77yJ44CCCiAgICAgICAgICAgIDMuIOaJpuaJp+aMgeaJk+W8gO+8muWboOacieWBmiBBcHBsZSDlhaznr4HvvIzpnIDlncnjg5HmrKHoiKzpgZPnu5/orqHpgInmia/ooYzvvJoKICAgICAgICAgICAgICAgYGBgYmFzaAogICAgICAgICAgICAgICB4YXR0ciAtZCBjb20uYXBwbGUucXVhcmFudGluZSAvQXBwbGljYXRpb25zL0Ryb3BOZXN0LmFwcAogICAgICAgICAgICAgICBgYGAKICAgICAgICAgICAgICAg5oiW5Y+z6YS/5YGH5Ye65bGP6KGMIOKGkuOAjOaJk+W8gOOAjeKGkiDnoa7orqTjgIIKCiAgICAgICAgICAgID4g5pys5omT5byA6L+v5ZCN6K+05piO77yI5pyq5YWs6K+B77yJ44CC5q2j5byP562+5ZCN54mI5pys6K+355SoIEFwcGxlIERldmVsb3BlciDotKblj7fmnKzlnLDlnLDmnoTlu7rjgIIKCiAgICAgICAgICAgICMjIyDlrozmlbTlj5jmm7QKICAgICAgICAgIGRyYWZ0OiBmYWxzZQogICAgICAgICAgcHJlcmVsZWFzZTogZmFsc2UKICAgICAgICAgIGdlbmVyYXRlX3JlbGVhc2Vfbm90ZXM6IHRydWUK
+name: Build & Release
+
+# 打包 DropNest.app 为 DMG 并发布到 GitHub Releases。
+#
+# 触发条件：
+#   1. push tag v* → 构建并创建 Release
+#   2. 手动触发（Actions → Run workflow）→ 仅构建，上传 artifact
+#
+# 签名说明：CI 无开发者账号，使用 ad-hoc 签名（CODE_SIGN_IDENTITY="-"）。
+# 产出的 DMG 未做 Apple 公证，用户首次打开需手动去隔离属性（见 Release 说明）。
+# 正式签名+公证版本请用本地开发者账号构建。
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write  # 创建 Release 需要
+
+jobs:
+  build:
+    name: Build DMG
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show environment
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Build app (ad-hoc signed)
+        run: |
+          xcodebuild \
+            -project DropNest.xcodeproj \
+            -scheme DropNest \
+            -configuration Release \
+            -derivedDataPath build \
+            -destination 'generic/platform=macOS' \
+            build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
+
+      - name: Locate .app bundle
+        id: locate
+        run: |
+          APP_PATH="$(find build/Build/Products -name 'DropNest.app' -type d | head -1)"
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::DropNest.app not found in build output"
+            exit 1
+          fi
+          echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
+          echo "Found app at: $APP_PATH"
+
+      - name: Re-sign embedded frameworks (ad-hoc)
+        # 预编译的 MediaRemoteAdapter.framework 自带原始签名与 Team ID，
+        # 与主 App 的 ad-hoc 签名（无 Team ID）不匹配，dyld 加载时会因
+        # Team ID 不一致直接终止进程（SIGABRT, Library missing）。
+        # CODE_SIGNING_REQUIRED=NO 导致 Xcode 的 CodeSignOnCopy 未重签名 framework，
+        # 这里手动对 app bundle 内所有内嵌 framework 做 ad-hoc 重签名以消除 Team ID 差异。
+        run: |
+          APP_PATH="${{ steps.locate.outputs.app_path }}"
+          FRAMEWORKS_DIR="$APP_PATH/Contents/Frameworks"
+          if [ -d "$FRAMEWORKS_DIR" ]; then
+            echo "Re-signing embedded frameworks in $FRAMEWORKS_DIR"
+            find "$FRAMEWORKS_DIR" -name "*.framework" -type d | while read fw; do
+              echo "  Ad-hoc signing: $fw"
+              codesign --force --deep --sign - "$fw"
+            done
+          else
+            echo "No Frameworks directory found, skipping re-sign"
+          fi
+
+      - name: Setup Python for dmgbuild
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dmgbuild (hash-pinned)
+        run: |
+          python3 -m pip install --require-hashes -r Configuration/dmg/requirements.txt
+
+      - name: Build DMG
+        run: |
+          chmod +x ./Configuration/dmg/create_dmg.sh
+          ./Configuration/dmg/create_dmg.sh \
+            "${{ steps.locate.outputs.app_path }}" \
+            "build/DropNest.dmg" \
+            "DropNest"
+
+      - name: Read version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="dev-$(date +%Y%m%d)-${GITHUB_SHA::7}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DropNest-${{ steps.version.outputs.version }}
+          path: build/DropNest.dmg
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/DropNest.dmg
+          name: DropNest ${{ github.ref_name }}
+          body: |
+            ## DropNest ${{ github.ref_name }}
+
+            ### 安装步骤
+
+            1. 下载 `DropNest.dmg`
+            2. 将 DropNest 拖入「应用程序」文件夹
+            3. 首次打开：因未做 Apple 公证，需在终端执行：
+               ```bash
+               xattr -d com.apple.quarantine /Applications/DropNest.app
+               ```
+               或右键点击应用 →「打开」→ 确认。
+
+            > 本构建为 ad-hoc 签名（未公证）。正式签名版本请用 Apple Developer 账号本地构建。
+
+            ### 完整变更
+          draft: false
+          prerelease: false
+          generate_release_notes: true
