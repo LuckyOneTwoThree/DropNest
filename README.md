@@ -5,6 +5,10 @@
 <h1 align="center">DropNest 🪺</h1>
 
 <p align="center">
+  📖 <a href="README_EN.md">English</a> · 中文
+</p>
+
+<p align="center">
   把 MacBook 的刘海变成你的「第二桌面」。<br/>
   文件暂存 · 悬浮巢群 · 剪贴板历史 · 媒体控制 · 系统 HUD —— 一切尽在刘海上方。
 </p>
