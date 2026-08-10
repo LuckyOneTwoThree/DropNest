@@ -14,6 +14,7 @@ import SwiftUI
 @MainActor
 struct ContentView: View {
     @EnvironmentObject var vm: NotchViewModel
+    @ObservedObject var languageManager = LanguageManager.shared
     // 折叠态 HUD/电池/音乐的高频状态（sneakPeek、expandingView、isPlaying 等）已下沉到
     // ClosedNotchContent / ChinRect 子视图各自订阅，避免按键时整棵 NotchLayout body 重估。
     // firstLaunch 仅首次启动变化一次，用 @AppStorage 直读，无需订阅 coordinator。
@@ -137,7 +138,7 @@ struct ContentView: View {
                     }
                     .sensoryFeedback(.alignment, trigger: haptics)
                     .contextMenu {
-                        Button("设置") {
+                        Button("Settings") {
                             SettingsWindowController.shared.showWindow()
                         }
                         .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
@@ -161,6 +162,7 @@ struct ContentView: View {
         .background(dragDetector)
         .preferredColorScheme(.dark)
         .environmentObject(vm)
+        .environment(\.locale, languageManager.currentLocale)
         .onChange(of: vm.anyDropZoneTargeting) { _, isTargeted in
             anyDropDebounceTask?.cancel()
 

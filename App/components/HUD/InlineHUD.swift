@@ -70,7 +70,7 @@ struct InlineHUD: View {
                     }
                 })
                 if type == .volume && value.isZero {
-                    Text("已静音")
+                    Text("Muted")
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(.gray)
@@ -122,11 +122,11 @@ struct InlineHUD: View {
     func Type2Name(_ type: SneakContentType) -> String {
         switch type {
         case .volume:
-            return "音量"
+            return String(localized: "Volume", locale: LanguageManager.shared.currentLocale)
         case .brightness:
-            return "亮度"
+            return String(localized: "Brightness", locale: LanguageManager.shared.currentLocale)
         case .backlight:
-            return "背光"
+            return String(localized: "Keyboard Backlight", locale: LanguageManager.shared.currentLocale)
         default:
             return ""
         }

@@ -16,15 +16,15 @@ struct DropNestApp: App {
 
     var body: some Scene {
         MenuBarExtra("DropNest", systemImage: "sparkle", isInserted: $showMenuBarIcon) {
-            Button("设置") {
+            Button("Settings") {
                 SettingsWindowController.shared.showWindow()
             }
             .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
             Divider()
-            Button("重启 DropNest") {
+            Button("Restart DropNest") {
                 ApplicationRelauncher.restart()
             }
-            Button("退出", role: .destructive) {
+            Button("Quit", role: .destructive) {
                 NSApplication.shared.terminate(self)
             }
             .keyboardShortcut(KeyEquivalent("Q"), modifiers: .command)
@@ -374,6 +374,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // 迁移旧的中文 rawValue 到英文标识符（OptionKeyAction 枚举 rawValue 重命名）
+        OptionKeyAction.migrateLegacyRawValueIfNeeded()
+
         // 单实例保护：多个实例共享同一沙盒容器，并发读写 items.json/blobs 会互相踩踏
         // （实测出现过 prune 删 blob 而另一实例仍引用 → 图片缩略图丢失）。保留最新启动的实例。
         enforceSingleInstance()

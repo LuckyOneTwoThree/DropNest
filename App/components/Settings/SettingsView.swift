@@ -12,33 +12,34 @@ import SwiftUI
 
 struct SettingsView: View {
     @State private var selectedTab = "General"
+    @ObservedObject var languageManager = LanguageManager.shared
 
     var body: some View {
         NavigationSplitView {
             List(selection: $selectedTab) {
                 NavigationLink(value: "General") {
-                    Label("通用", systemImage: "gear")
+                    Label("General", systemImage: "gear")
                 }
                 NavigationLink(value: "Appearance") {
-                    Label("外观", systemImage: "eye")
+                    Label("Appearance", systemImage: "eye")
                 }
                 NavigationLink(value: "Media") {
-                    Label("媒体", systemImage: "play.laptopcomputer")
+                    Label("Media", systemImage: "play.laptopcomputer")
                 }
                 NavigationLink(value: "Shelf") {
-                    Label("文件架", systemImage: "books.vertical")
+                    Label("Shelf", systemImage: "books.vertical")
                 }
                 NavigationLink(value: "Clipboard") {
-                    Label("剪贴板", systemImage: "clipboard")
+                    Label("Clipboard", systemImage: "clipboard")
                 }
                 NavigationLink(value: "Battery") {
-                    Label("电池", systemImage: "battery.100")
+                    Label("Battery", systemImage: "battery.100")
                 }
                 NavigationLink(value: "HUD") {
                     Label("HUD", systemImage: "speaker.wave.2")
                 }
                 NavigationLink(value: "About") {
-                    Label("关于", systemImage: "info.circle")
+                    Label("About", systemImage: "info.circle")
                 }
             }
             .listStyle(SidebarListStyle())
@@ -76,6 +77,7 @@ struct SettingsView: View {
         .frame(width: 700)
         .background(Color(NSColor.windowBackgroundColor))
         .tint(.effectiveAccent)
+        .environment(\.locale, languageManager.currentLocale)
     }
 }
 
@@ -83,7 +85,7 @@ struct SettingsView: View {
 private extension View {
     func quitToolbar() -> some View {
         self.toolbar {
-            Button("退出应用") {
+            Button("Quit Application") {
                 NSApp.terminate(nil)
             }
             .controlSize(.extraLarge)
@@ -98,6 +100,7 @@ struct GeneralSettings: View {
     }
     @EnvironmentObject var vm: NotchViewModel
     @ObservedObject var coordinator = NotchViewCoordinator.shared
+    @ObservedObject var languageManager = LanguageManager.shared
 
     @Default(.gestureSensitivity) var gestureSensitivity
     @Default(.minimumHoverDuration) var minimumHoverDuration
@@ -113,19 +116,30 @@ struct GeneralSettings: View {
     var body: some View {
         Form {
             Section {
+                Picker("App Language", selection: $languageManager.currentLanguage) {
+                    ForEach(AppLanguage.allCases) { lang in
+                        Text(lang.localizedTitle).tag(lang)
+                    }
+                }
+                .pickerStyle(.menu)
+            } header: {
+                Text("Language")
+            }
+
+            Section {
                 Defaults.Toggle(key: .menubarIcon) {
-                    Text("显示菜单栏图标")
+                    Text("Show Menu Bar Icon")
                 }
                 .tint(.effectiveAccent)
-                LaunchAtLogin.Toggle("登录时启动")
+                LaunchAtLogin.Toggle(String(localized: "Launch at Login", locale: LanguageManager.shared.currentLocale))
                 Defaults.Toggle(key: .showOnAllDisplays) {
-                    Text("在所有显示器上显示")
+                    Text("Show on All Displays")
                 }
                 .onChange(of: showOnAllDisplays) {
                     NotificationCenter.default.post(
                         name: Notification.Name.showOnAllDisplaysChanged, object: nil)
                 }
-                Picker("首选显示器", selection: $coordinator.preferredScreenUUID) {
+                Picker("Preferred Display", selection: $coordinator.preferredScreenUUID) {
                     ForEach(screens, id: \.uuid) { screen in
                         Text(screen.name).tag(screen.uuid as String?)
                     }
@@ -139,7 +153,7 @@ struct GeneralSettings: View {
                 .disabled(showOnAllDisplays)
 
                 Defaults.Toggle(key: .automaticallySwitchDisplay) {
-                    Text("自动切换显示器")
+                    Text("Auto Switch Display")
                 }
                 .onChange(of: automaticallySwitchDisplay) {
                     NotificationCenter.default.post(
@@ -147,20 +161,20 @@ struct GeneralSettings: View {
                 }
                 .disabled(showOnAllDisplays)
             } header: {
-                Text("系统功能")
+                Text("System Features")
             }
 
             Section {
                 Picker(
                     selection: $notchHeightMode,
                     label:
-                        Text("刘海高度（刘海屏）")
+                        Text("Notch Height (Notch Displays)")
                 ) {
-                    Text("匹配真实刘海高度")
+                    Text("Match Real Notch Height")
                         .tag(WindowHeightMode.matchRealNotchSize)
-                    Text("匹配菜单栏高度")
+                    Text("Match Menu Bar Height")
                         .tag(WindowHeightMode.matchMenuBar)
-                    Text("自定义高度")
+                    Text("Custom Height")
                         .tag(WindowHeightMode.custom)
                 }
                 .onChange(of: notchHeightMode) {
@@ -176,20 +190,20 @@ struct GeneralSettings: View {
                         name: Notification.Name.notchHeightChanged, object: nil)
                 }
                 if notchHeightMode == .custom {
-                    Slider(value: $notchHeight, in: 15...45, step: 1) {
-                        Text("自定义刘海高度 - \(notchHeight, specifier: "%.0f")")
+                    Slider(value: $notchHeight, in: 0...60, step: 1) {
+                        Text(String(format: String(localized: "Custom Notch Height: %d pt", locale: LanguageManager.shared.currentLocale), Int(notchHeight)))
                     }
                     .onChange(of: notchHeight) {
                         NotificationCenter.default.post(
                             name: Notification.Name.notchHeightChanged, object: nil)
                     }
                 }
-                Picker("刘海高度（非刘海屏）", selection: $nonNotchHeightMode) {
-                    Text("匹配菜单栏高度")
+                Picker("Notch Height (Non-Notch Displays)", selection: $nonNotchHeightMode) {
+                    Text("Match Menu Bar Height")
                         .tag(WindowHeightMode.matchMenuBar)
-                    Text("匹配真实刘海高度")
+                    Text("Match Real Notch Height")
                         .tag(WindowHeightMode.matchRealNotchSize)
-                    Text("自定义高度")
+                    Text("Custom Height")
                         .tag(WindowHeightMode.custom)
                 }
                 .onChange(of: nonNotchHeightMode) {
@@ -206,7 +220,7 @@ struct GeneralSettings: View {
                 }
                 if nonNotchHeightMode == .custom {
                     Slider(value: $nonNotchHeight, in: 0...40, step: 1) {
-                        Text("自定义刘海高度 - \(nonNotchHeight, specifier: "%.0f")")
+                        Text(String(format: String(localized: "Custom Notch Height: %d pt", locale: LanguageManager.shared.currentLocale), Int(nonNotchHeight)))
                     }
                     .onChange(of: nonNotchHeight) {
                         NotificationCenter.default.post(
@@ -214,7 +228,7 @@ struct GeneralSettings: View {
                     }
                 }
             } header: {
-                Text("刘海尺寸")
+                Text("Notch Dimensions")
             }
 
             NotchBehaviour()
@@ -234,30 +248,30 @@ struct GeneralSettings: View {
     func gestureControls() -> some View {
         Section {
             Defaults.Toggle(key: .enableGestures) {
-                Text("启用手势")
+                Text("Enable Gestures")
             }
             .disabled(!openNotchOnHover)
             if enableGestures {
                 Defaults.Toggle(key: .closeGestureEnabled) {
-                    Text("关闭手势")
+                    Text("Disable Gestures")
                 }
                 Slider(value: $gestureSensitivity, in: 100...300, step: 100) {
                     HStack {
-                        Text("手势灵敏度")
+                        Text("Gesture Sensitivity")
                         Spacer()
                         Text(
                             Defaults[.gestureSensitivity] == 100
-                                ? "高" : Defaults[.gestureSensitivity] == 200 ? "中" : "低"
+                                ? String(localized: "High", locale: LanguageManager.shared.currentLocale) : Defaults[.gestureSensitivity] == 200 ? String(localized: "Medium", locale: LanguageManager.shared.currentLocale) : String(localized: "Low", locale: LanguageManager.shared.currentLocale)
                         )
                         .foregroundStyle(.secondary)
                     }
                 }
             }
         } header: {
-            Text("手势控制")
+            Text("Gesture Control")
         } footer: {
             Text(
-                "在刘海双指上滑关闭，双指下滑打开（当 **悬停展开刘海** 关闭时生效）。\n剪贴板历史页签展开时下滑手势自动禁用，避免与滚动历史冲突。"
+                "Swipe up with two fingers on notch to close, swipe down to open (effective when **Hover to Expand Notch** is disabled).\nSwipe down gesture is automatically disabled when Clipboard History tab is expanded to avoid scrolling conflict."
             )
             .multilineTextAlignment(.trailing)
             .foregroundStyle(.secondary)
@@ -269,17 +283,17 @@ struct GeneralSettings: View {
     func NotchBehaviour() -> some View {
         Section {
             Defaults.Toggle(key: .openNotchOnHover) {
-                Text("悬停展开刘海")
+                Text("Hover to Expand Notch")
             }
             Defaults.Toggle(key: .enableHaptics) {
-                Text("启用触感反馈")
+                Text("Enable Haptic Feedback")
             }
             if openNotchOnHover {
                 Slider(value: $minimumHoverDuration, in: 0...1, step: 0.1) {
                     HStack {
-                        Text("悬停延迟")
+                        Text("Hover Delay")
                         Spacer()
-                        Text("\(minimumHoverDuration, specifier: "%.1f")s")
+                        Text(String(format: String(localized: "%.1f s", locale: LanguageManager.shared.currentLocale), minimumHoverDuration))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -289,7 +303,7 @@ struct GeneralSettings: View {
                 }
             }
         } header: {
-            Text("刘海行为")
+            Text("Notch Behavior")
         }
     }
 }
@@ -299,24 +313,24 @@ struct Appearance: View {
         Form {
             Section {
                 Defaults.Toggle(key: .settingsIconInNotch) {
-                    Text("在刘海显示设置图标")
+                    Text("Show Settings Icon in Notch")
                 }
                 Defaults.Toggle(key: .enableShadow) {
-                    Text("启用阴影")
+                    Text("Enable Shadow")
                 }
                 Defaults.Toggle(key: .cornerRadiusScaling) {
-                    Text("展开时缩放圆角")
+                    Text("Scale Corner Radius When Expanded")
                 }
             } header: {
-                Text("通用")
+                Text("General")
             }
 
             Section {
                 Defaults.Toggle(key: .useCustomAccentColor) {
-                    Text("使用自定义强调色")
+                    Text("Use Custom Accent Color")
                 }
             } header: {
-                Text("强调色")
+                Text("Accent Color")
             }
         }
         .quitToolbar()
@@ -333,24 +347,24 @@ struct Media: View {
     var body: some View {
         Form {
             Section {
-                Toggle("在刘海显示媒体状态", isOn: $coordinator.musicLiveActivityEnabled)
+                Toggle("Show Media Status in Notch", isOn: $coordinator.musicLiveActivityEnabled)
                 Defaults.Toggle(key: .coloredSpectrogram) {
-                    Text("彩色频谱")
+                    Text("Colorful Spectrum")
                 }
             } header: {
-                Text("媒体状态条")
+                Text("Media Status Bar")
             } footer: {
-                Text("播放媒体时，刘海会显示当前曲目（封面 + 动态频谱）。")
+                Text("When playing media, the notch will display current track (cover + dynamic spectrum).")
             }
 
             Section {
                 Slider(value: $waitInterval, in: 1...10, step: 1) {
-                    Text("暂停后空闲超时 - \(waitInterval, specifier: "%.0f") 秒")
+                    Text(String(format: String(localized: "Idle Timeout After Pause: %d seconds", locale: LanguageManager.shared.currentLocale), Int(waitInterval)))
                 }
             } header: {
-                Text("空闲行为")
+                Text("Idle Behavior")
             } footer: {
-                Text("播放暂停后，媒体状态条保留的时间。")
+                Text("Duration media status bar remains visible after playback is paused.")
             }
         }
         .quitToolbar()
@@ -370,13 +384,13 @@ struct Shelf: View {
         Form {
             Section {
                 Defaults.Toggle(key: .boringShelf) {
-                    Text("启用文件架")
+                    Text("Enable Shelf")
                 }
                 Defaults.Toggle(key: .openShelfByDefault) {
-                    Text("有文件时默认展开文件架")
+                    Text("Expand Shelf by Default When Files Exist")
                 }
                 Defaults.Toggle(key: .expandedDragDetection) {
-                    Text("扩大拖拽检测区域")
+                    Text("Expand Drag Detection Region")
                 }
                 .onChange(of: expandedDragDetection) {
                     NotificationCenter.default.post(
@@ -386,35 +400,35 @@ struct Shelf: View {
                 }
                 Defaults.Toggle(key: .copyOnDrag) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("拖拽时复制文件")
-                        Text("开启（默认）：拖出暂存文件到目标位置时复制副本，原文件保留在原路径。\n关闭：拖出时移动原文件，原路径将被改变（等同于剪切）。")
+                        Text("Copy Files on Drag")
+                        Text("Enabled (default): Copy files to destination when dragging out temporary files; original files remain in place.\nDisabled: Move original files when dragging out (equivalent to cut).")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Defaults.Toggle(key: .autoRemoveShelfItems) {
-                    Text("拖出后从文件架移除")
+                    Text("Remove from Shelf After Dragging Out")
                 }
             } header: {
-                Text("通用")
+                Text("General")
             }
 
             Section {
                 Defaults.Toggle(key: .floatingNestEnabled) {
-                    Text("启用悬浮暂存巢")
+                    Text("Enable Floating Nests")
                 }
                 Defaults.Toggle(key: .nestShowOnDragStart) {
-                    Text("拖拽开始自动显示巢群")
+                    Text("Auto Show Nest Group on Drag Start")
                 }
                 .disabled(!floatingNestEnabled)
                 Slider(value: $shakeSensitivity, in: 0...1, step: 0.1) {
-                    Text("摇晃灵敏度 - \(shakeSensitivity, specifier: "%.1f")")
+                    Text(String(format: String(localized: "Shake Sensitivity: %.1f", locale: LanguageManager.shared.currentLocale), shakeSensitivity))
                 }
                 .disabled(!floatingNestEnabled)
                 Stepper(value: $nestMaxGridColumns, in: 2...4) {
                     HStack {
-                        Text("网格列数上限")
+                        Text("Max Grid Columns")
                         Spacer()
                         Text("\(nestMaxGridColumns) × \(nestMaxGridColumns)")
                             .foregroundStyle(.secondary)
@@ -422,12 +436,12 @@ struct Shelf: View {
                 }
                 .disabled(!floatingNestEnabled)
                 Defaults.Toggle(key: .nestAutoGroupOnBatchDrop) {
-                    Text("批量拖入自动成组")
+                    Text("Auto Group Batch Drops")
                 }
             } header: {
-                Text("悬浮暂存巢与集合")
+                Text("Floating Nests and Groups")
             } footer: {
-                Text("每个悬浮巢 = 一个集合。拖拽开始时自动在指针附近显示空巢胚，拖入即孵化为正式巢；关闭「拖拽开始自动显示」后仅摇晃指针召唤。网格列数上限控制单个巢的最大宽度（超出纵向滚动）。")
+                Text("Each floating nest = one group. Automatically displays empty nest indicator near cursor when drag starts, dropping hatches into a full nest; when auto show on drag start is disabled, invoke via mouse shake. Max grid columns controls max width of a nest.")
             }
         }
         .quitToolbar()
@@ -453,20 +467,20 @@ struct ClipboardSettings: View {
         Form {
             Section {
                 Defaults.Toggle(key: .clipboardHistoryEnabled) {
-                    Text("启用剪贴板历史")
+                    Text("Enable Clipboard History")
                 }
                 Defaults.Toggle(key: .clipboardKeepImages) {
-                    Text("记录图片")
+                    Text("Record Images")
                 }
                 .disabled(!historyEnabled)
                 Defaults.Toggle(key: .clipboardKeepFiles) {
-                    Text("记录文件引用")
+                    Text("Record File References")
                 }
                 .disabled(!historyEnabled)
             } header: {
-                Text("通用")
+                Text("General")
             } footer: {
-                Text("记录复制的文本、图片和文件引用，随时从历史中取回。文件只记录引用，不复制内容。")
+                Text("Records copied text, images, and file references, allowing retrieval anytime from history. Files record references only.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -474,41 +488,41 @@ struct ClipboardSettings: View {
             Section {
                 Stepper(value: $maxItems, in: 5...50, step: 5) {
                     HStack {
-                        Text("历史容量")
+                        Text("History Capacity")
                         Spacer()
-                        Text("\(maxItems) 条")
+                        Text("\(maxItems) items")
                             .foregroundStyle(.secondary)
                     }
                 }
-                Picker("保留时长", selection: $retentionDays) {
-                    Text("永不过期").tag(0)
-                    Text("1 天").tag(1)
-                    Text("7 天").tag(7)
-                    Text("30 天").tag(30)
+                Picker("Retention Duration", selection: $retentionDays) {
+                    Text("Never").tag(0)
+                    Text("1 Day").tag(1)
+                    Text("7 Days").tag(7)
+                    Text("30 Days").tag(30)
                 }
                 Stepper(value: $maxItemSizeMB, in: 1...100, step: 1) {
                     HStack {
-                        Text("单条大小上限")
+                        Text("Single Item Size Limit")
                         Spacer()
                         Text("\(maxItemSizeMB) MB")
                             .foregroundStyle(.secondary)
                     }
                 }
             } header: {
-                Text("容量")
+                Text("Capacity")
             } footer: {
-                Text("超出容量时自动淘汰最旧的记录；置顶（Pin）的记录不会被淘汰。")
+                Text("Oldest entries are automatically purged when capacity is exceeded; Pinned entries are never purged.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Section {
                 Defaults.Toggle(key: .clipboardHotkeyEnabled) {
-                    Text("快捷键呼出快速面板（⌃⌥V）")
+                    Text("Summon Quick Panel with Hotkey (⌃⌥V)")
                 }
                 .disabled(!historyEnabled)
                 Defaults.Toggle(key: .clipboardAutoPaste) {
-                    Text("选中后自动粘贴到当前应用")
+                    Text("Auto Paste to Active App When Selected")
                 }
                 .disabled(!historyEnabled)
                 .onChange(of: autoPaste) {
@@ -517,9 +531,9 @@ struct ClipboardSettings: View {
                     }
                 }
             } header: {
-                Text("快速面板")
+                Text("Quick Panel")
             } footer: {
-                Text("自动粘贴需要「辅助功能」权限；未授权时仅复制到剪贴板，可手动 ⌘V 粘贴。")
+                Text("Auto paste requires Accessibility permission; when ungranted, items are copied to clipboard for manual ⌘V paste.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -550,9 +564,9 @@ struct ClipboardSettings: View {
                     }
                 }
                 HStack {
-                    TextField("添加 Bundle ID（如 com.example.app）", text: $newIgnoredApp)
+                    TextField("Add Bundle ID (e.g. com.example.app)", text: $newIgnoredApp)
                         .textFieldStyle(.roundedBorder)
-                    Button("添加") {
+                    Button("Add") {
                         let id = newIgnoredApp.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !id.isEmpty, !ignoredApps.contains(id) else { return }
                         ignoredApps.append(id)
@@ -561,9 +575,9 @@ struct ClipboardSettings: View {
                     .disabled(newIgnoredApp.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             } header: {
-                Text("忽略的应用")
+                Text("Ignored Applications")
             } footer: {
-                Text("来自这些应用的复制内容不会被记录。密码管理器（如 1Password）复制的内容始终自动跳过。")
+                Text("Copies from these applications will not be recorded. Password managers (e.g. 1Password) are always automatically skipped.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -595,22 +609,22 @@ struct HUDSettings: View {
             Section {
                 if !accessibilityAuthorized {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("需要辅助功能权限")
+                        Text("Accessibility Permission Required")
                             .font(.headline)
-                        Text("HUD 替换需要辅助功能权限来拦截系统媒体键并抑制原生 bezel。")
+                        Text("HUD replacement requires Accessibility permission to intercept system media keys and suppress native bezel.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         HStack(spacing: 12) {
-                            Button("请求权限") {
+                            Button("Request Permission") {
                                 MediaKeyInterceptor.shared.requestAccessibilityAuthorization()
                             }
-                            Button("打开系统设置") {
+                            Button("Open System Settings") {
                                 if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
                                     NSWorkspace.shared.open(url)
                                 }
                             }
                         }
-                        Text("提示：若未弹出授权窗口（多因之前拒绝过或换过构建版本），请手动在「系统设置 ▸ 隐私与安全性 ▸ 辅助功能」中启用 DropNest，然后重启本 App 才能生效。")
+                        Text("Tip: If the authorization window does not appear, please manually enable DropNest under System Settings ▸ Privacy & Security ▸ Accessibility, then restart this App.")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -618,81 +632,81 @@ struct HUDSettings: View {
                     .padding(.vertical, 4)
                 }
                 Defaults.Toggle(key: .hudReplacement) {
-                    Text("启用 HUD 替换")
+                    Text("Enable HUD Replacement")
                 }
                 .disabled(!accessibilityAuthorized)
             } header: {
-                Text("主开关")
+                Text("Main Switch")
             } footer: {
-                Text("启用后，按音量键时刘海会显示 HUD 而不是系统原生居中 bezel。")
+                Text("When enabled, pressing volume keys will show HUD in Notch instead of system native centered bezel.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Section {
                 Defaults.Toggle(key: .volumeHUDEnabled) {
-                    Text("音量 HUD")
+                    Text("Volume HUD")
                 }
                 Defaults.Toggle(key: .brightnessHUDEnabled) {
-                    Text("亮度 HUD")
+                    Text("Brightness HUD")
                 }
                 Defaults.Toggle(key: .keyboardBacklightHUDEnabled) {
-                    Text("键盘背光 HUD")
+                    Text("Keyboard Backlight HUD")
                 }
             } header: {
-                Text("各能力开关")
+                Text("Feature Toggles")
             } footer: {
-                Text("单独控制各类按键的拦截与 HUD 显示。关闭的类别将放行原生事件。")
+                Text("Individually control key interception and HUD display per category. Disabled categories pass through native events.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             .disabled(!hudReplacement)
 
             Section {
-                Picker("Option 键行为", selection: $optionKeyAction) {
+                Picker("Option Key Behavior", selection: $optionKeyAction) {
                     ForEach(OptionKeyAction.allCases) { action in
-                        Text(action.rawValue).tag(action)
+                        Text(action.localizedTitle).tag(action)
                     }
                 }
                 Defaults.Toggle(key: .enableGradient) {
-                    Text("渐变进度条")
+                    Text("Gradient Progress Bar")
                 }
                 Defaults.Toggle(key: .systemEventIndicatorShadow) {
-                    Text("进度条阴影")
+                    Text("Progress Bar Shadow")
                 }
                 Defaults.Toggle(key: .systemEventIndicatorUseAccent) {
-                    Text("使用强调色")
+                    Text("Use Accent Color")
                 }
             } header: {
-                Text("通用")
+                Text("General")
             }
             .disabled(!hudReplacement)
 
             Section {
                 Defaults.Toggle(key: .showOpenNotchHUD) {
-                    Text("展开态显示 HUD")
+                    Text("Show HUD in Expanded State")
                 }
                 Defaults.Toggle(key: .showOpenNotchHUDPercentage) {
-                    Text("展开态显示百分比")
+                    Text("Show Percentage in Expanded State")
                 }
             } header: {
-                Text("展开态")
+                Text("Expanded State")
             }
             .disabled(!hudReplacement)
 
             Section {
-                Picker("折叠态样式", selection: Binding(
-                    get: { inlineHUD ? "内联" : "默认" },
-                    set: { Defaults[.inlineHUD] = ($0 == "内联") }
+                Picker("Collapsed Style", selection: Binding(
+                    get: { inlineHUD ? "Inline" : "Default" },
+                    set: { Defaults[.inlineHUD] = ($0 == "Inline") }
                 )) {
-                    Text("默认").tag("默认")
-                    Text("内联").tag("内联")
+                    Text(String(localized: "Default", locale: LanguageManager.shared.currentLocale)).tag("Default")
+                    Text(String(localized: "Inline", locale: LanguageManager.shared.currentLocale)).tag("Inline")
                 }
                 Defaults.Toggle(key: .showClosedNotchHUDPercentage) {
-                    Text("折叠态显示百分比")
+                    Text("Show Percentage in Collapsed State")
                 }
             } header: {
-                Text("折叠态")
+                Text("Collapsed State")
             }
             .disabled(!hudReplacement)
         }
@@ -701,11 +715,7 @@ struct HUDSettings: View {
         .navigationTitle("HUD")
         .task {
             accessibilityAuthorized = MediaKeyInterceptor.isAccessibilityTrusted
-            // 已授权则无需轮询
             guard !accessibilityAuthorized else { return }
-            // 每秒轮询授权状态，授权后自愈启动事件拦截。
-            // .task 在视图从视图树移除时自动取消，无需手动 invalidate Timer，
-            // 避免 NSWindow.close() 不触发 .onDisappear 导致 Timer 持续空转 + @State 泄漏。
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 if Task.isCancelled { return }
@@ -731,77 +741,77 @@ struct BatterySettings: View {
         Form {
             Section {
                 Defaults.Toggle(key: .showBatteryIndicator) {
-                    Text("展开态显示电池指示器")
+                    Text("Show Battery Indicator in Expanded State")
                 }
                 Defaults.Toggle(key: .showBatteryPercentage) {
-                    Text("显示百分比")
+                    Text("Show Percentage")
                 }
                 .disabled(!showBatteryIndicator)
                 Defaults.Toggle(key: .showPowerStatusIcons) {
-                    Text("显示充电/插电图标")
+                    Text("Show Charging/Plug Icon")
                 }
                 .disabled(!showBatteryIndicator)
             } header: {
-                Text("展开态指示器")
+                Text("Expanded State Indicator")
             } footer: {
-                Text("展开刘海时，在右上角显示电池图标和百分比。")
+                Text("Displays battery icon and percentage in top right when expanding notch.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Section {
                 Defaults.Toggle(key: .showPowerStatusNotifications) {
-                    Text("电源状态变化通知")
+                    Text("Power Status Change Notification")
                 }
             } header: {
-                Text("折叠态通知")
+                Text("Collapsed State Notification")
             } footer: {
-                Text("接入/断开电源、开始/停止充电、切换低电量模式时，刘海会短暂显示横向电池通知。")
+                Text("Notch briefly displays horizontal battery notification when connecting/disconnecting power, starting/stopping charging, or toggling low power mode.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Section {
                 HStack {
-                    Text("当前电量")
+                    Text("Current Level")
                     Spacer()
                     Text("\(Int(batteryModel.levelBattery))%")
                         .foregroundStyle(.secondary)
                 }
                 HStack {
-                    Text("最大容量")
+                    Text("Max Capacity")
                     Spacer()
                     Text("\(Int(batteryModel.maxCapacity))%")
                         .foregroundStyle(.secondary)
                 }
                 HStack {
-                    Text("电源状态")
+                    Text("Power Source")
                     Spacer()
-                    Text(batteryModel.isPluggedIn ? "已连接" : "使用电池")
+                    Text(batteryModel.isPluggedIn ? String(localized: "Connected", locale: LanguageManager.shared.currentLocale) : String(localized: "On Battery", locale: LanguageManager.shared.currentLocale))
                         .foregroundStyle(.secondary)
                 }
                 HStack {
-                    Text("充电状态")
+                    Text("Charging Status")
                     Spacer()
-                    Text(batteryModel.isCharging ? "正在充电" : "未在充电")
+                    Text(batteryModel.isCharging ? String(localized: "Charging", locale: LanguageManager.shared.currentLocale) : String(localized: "Not Charging", locale: LanguageManager.shared.currentLocale))
                         .foregroundStyle(.secondary)
                 }
                 HStack {
-                    Text("低电量模式")
+                    Text("Low Power Mode")
                     Spacer()
-                    Text(batteryModel.isInLowPowerMode ? "开" : "关")
+                    Text(batteryModel.isInLowPowerMode ? String(localized: "On", locale: LanguageManager.shared.currentLocale) : String(localized: "Off", locale: LanguageManager.shared.currentLocale))
                         .foregroundStyle(.secondary)
                 }
                 if batteryModel.timeToFullCharge > 0 {
                     HStack {
-                        Text("充满剩余")
+                        Text("Time Until Full")
                         Spacer()
-                        Text("\(batteryModel.timeToFullCharge) 分钟")
+                        Text(String(format: String(localized: "%d minutes", locale: LanguageManager.shared.currentLocale), batteryModel.timeToFullCharge))
                             .foregroundStyle(.secondary)
                     }
                 }
             } header: {
-                Text("实时状态")
+                Text("Real-Time Status")
             }
         }
         .quitToolbar()
@@ -816,19 +826,19 @@ struct About: View {
         Form {
             Section {
                 HStack {
-                    Text("版本名称")
+                    Text("Release Name")
                     Spacer()
                     Text(Defaults[.releaseName])
                         .foregroundStyle(.secondary)
                 }
                 HStack {
-                    Text("版本")
+                    Text("Version")
                     Spacer()
                     if showBuildNumber {
                         Text("(\(Bundle.main.buildVersionNumber ?? ""))")
                             .foregroundStyle(.secondary)
                     }
-                    Text(Bundle.main.releaseVersionNumber ?? "unkown")
+                    Text(Bundle.main.releaseVersionNumber ?? String(localized: "Unknown", locale: LanguageManager.shared.currentLocale))
                         .foregroundStyle(.secondary)
                 }
                 .onTapGesture {
@@ -837,7 +847,7 @@ struct About: View {
                     }
                 }
             } header: {
-                Text("版本信息")
+                Text("Version Information")
             }
         }
         .quitToolbar()

@@ -105,11 +105,11 @@ struct ClipboardItem: Identifiable, Codable, Equatable, Sendable {
         switch primaryKind {
         case .file:
             let urls = fileURLs ?? []
-            guard let first = urls.first else { return "文件" }
+            guard let first = urls.first else { return String(localized: "File", locale: LanguageManager.shared.currentLocale) }
             let name = (try? first.resourceValues(forKeys: [.localizedNameKey]).localizedName) ?? first.lastPathComponent
-            return urls.count > 1 ? "\(name) 等 \(urls.count) 项" : name
+            return urls.count > 1 ? String(localized: "\(name) and \(urls.count) other items", locale: LanguageManager.shared.currentLocale) : name
         case .image:
-            return "图片"
+            return String(localized: "Image", locale: LanguageManager.shared.currentLocale)
         case .link:
             guard let url = linkURL else { return "" }
             let s = url.absoluteString

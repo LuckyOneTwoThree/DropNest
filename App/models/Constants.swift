@@ -27,24 +27,68 @@ extension Notification.Name {
     static let mediaControllerChanged = Notification.Name("mediaControllerChanged")
 }
 
-// Notch height mode for settings
 enum WindowHeightMode: String, Defaults.Serializable {
     case matchMenuBar = "Match menubar height"
     case matchRealNotchSize = "Match real notch height"
     case custom = "Custom height"
+
+    var localizedTitle: String {
+        switch self {
+        case .matchMenuBar:
+            return String(localized: "Match menu bar height", locale: LanguageManager.shared.currentLocale)
+        case .matchRealNotchSize:
+            return String(localized: "Match real notch height", locale: LanguageManager.shared.currentLocale)
+        case .custom:
+            return String(localized: "Custom height", locale: LanguageManager.shared.currentLocale)
+        }
+    }
 }
 
 /// 按住 Option 键时按媒体键的行为
 enum OptionKeyAction: String, CaseIterable, Identifiable, Defaults.Serializable {
-    case openSettings = "打开系统设置"
-    case showHUD = "显示 HUD"
-    case none = "无操作"
+    case openSettings = "openSettings"
+    case showHUD = "showHUD"
+    case none = "none"
 
     var id: String { self.rawValue }
+
+    var localizedTitle: String {
+        switch self {
+        case .openSettings:
+            return String(localized: "Open System Settings", locale: LanguageManager.shared.currentLocale)
+        case .showHUD:
+            return String(localized: "Show HUD", locale: LanguageManager.shared.currentLocale)
+        case .none:
+            return String(localized: "No Action", locale: LanguageManager.shared.currentLocale)
+        }
+    }
+
+    // 旧持久化值是中文 rawValue（"打开系统设置"/"显示 HUD"/"无操作"），
+    // 升级到英文标识符后需在解码时迁移，避免读取旧 UserDefaults 失败回退到默认值。
+    static let legacyRawValueMap: [String: OptionKeyAction] = [
+        "打开系统设置": .openSettings,
+        "显示 HUD": .showHUD,
+        "无操作": .none
+    ]
+
+    /// App 启动早期调用：将旧版中文 rawValue 迁移到新的英文标识符。
+    static func migrateLegacyRawValueIfNeeded() {
+        let keyName = "optionKeyAction"
+        guard let raw = UserDefaults.standard.object(forKey: keyName) as? String else {
+            return
+        }
+        // 当前 rawValue 集合已是英文标识符；若 UserDefaults 里存的还是中文，则迁移。
+        guard OptionKeyAction(rawValue: raw) == nil,
+              let migrated = legacyRawValueMap[raw] else {
+            return
+        }
+        Defaults[.optionKeyAction] = migrated
+    }
 }
 
 extension Defaults.Keys {
     // MARK: General
+    static let appLanguage = Key<AppLanguage>("appLanguage", default: .system)
     static let menubarIcon = Key<Bool>("menubarIcon", default: true)
     static let showOnAllDisplays = Key<Bool>("showOnAllDisplays", default: false)
     static let automaticallySwitchDisplay = Key<Bool>("automaticallySwitchDisplay", default: true)

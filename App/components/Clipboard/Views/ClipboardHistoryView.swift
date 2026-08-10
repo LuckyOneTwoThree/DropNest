@@ -43,7 +43,7 @@ struct ClipboardHistoryView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                TextField("搜索剪贴板历史", text: $cvm.searchText)
+                TextField("Search Clipboard History", text: $cvm.searchText)
                     .textFieldStyle(.plain)
                     .font(.system(.callout, design: .rounded))
                 if !cvm.searchText.isEmpty {
@@ -68,7 +68,7 @@ struct ClipboardHistoryView: View {
         .padding(.horizontal, 12)
     }
 
-    /// Two-step clear: first tap arms ("确认清空？"), second tap executes.
+    /// Two-step clear: first tap arms ("Confirm Clear?"), second tap executes.
     /// Avoids system alert sheets that may not present reliably on the
     /// non-activating notch panel.
     private var clearButton: some View {
@@ -91,7 +91,7 @@ struct ClipboardHistoryView: View {
                 Image(systemName: confirmClear ? "exclamationmark.triangle.fill" : "trash")
                     .font(.system(size: 11))
                 if confirmClear {
-                    Text("确认清空？")
+                    Text("Confirm Clear?")
                         .font(.system(.caption2, design: .rounded))
                         .fontWeight(.semibold)
                 }
@@ -99,7 +99,7 @@ struct ClipboardHistoryView: View {
             .foregroundStyle(confirmClear ? .red : .red.opacity(0.85))
         }
         .buttonStyle(.plain)
-        .help("清空全部剪贴板历史")
+        .help("Clear all clipboard history")
         .animation(.smooth(duration: 0.15), value: confirmClear)
     }
 
@@ -107,9 +107,9 @@ struct ClipboardHistoryView: View {
     private var content: some View {
         let displayed = cvm.cachedDisplayedItems
         if store.items.isEmpty {
-            emptyState(icon: "clipboard", text: "暂无剪贴板历史", hint: "复制的文本、图片和文件会出现在这里")
+            emptyState(icon: "clipboard", text: "No Clipboard History", hint: "Copied text, images, and files will appear here")
         } else if displayed.isEmpty {
-            emptyState(icon: "magnifyingglass", text: "没有匹配的记录", hint: "换个关键词试试")
+            emptyState(icon: "magnifyingglass", text: "No Matching Records", hint: "Try a different keyword")
         } else {
             ScrollView {
                 LazyVStack(spacing: 2) {
@@ -118,17 +118,17 @@ struct ClipboardHistoryView: View {
                             cvm.copyBack(item)
                         }
                         .contextMenu {
-                            Button(item.isPinned ? "取消置顶" : "置顶") {
+                            Button(item.isPinned ? "Unpin" : "Pin") {
                                 store.togglePin(item)
                             }
                             let qlURLs = cvm.quickLookURLs(for: item)
                             if !qlURLs.isEmpty {
-                                Button("快速查看") {
+                                Button("Quick Look") {
                                     quickLookService.show(urls: qlURLs)
                                 }
                             }
                             Divider()
-                            Button("删除", role: .destructive) {
+                            Button("Delete", role: .destructive) {
                                 store.remove(item)
                             }
                         }

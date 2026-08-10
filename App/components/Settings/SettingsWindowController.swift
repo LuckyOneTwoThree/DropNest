@@ -32,7 +32,7 @@ class SettingsWindowController: NSWindowController {
     private func setupWindow() {
         guard let window = window else { return }
 
-        window.title = "DropNest 设置"
+        window.title = String(localized: "DropNest Settings", locale: LanguageManager.shared.currentLocale)
         window.titlebarAppearsTransparent = false
         window.titleVisibility = .visible
         window.toolbarStyle = .unified

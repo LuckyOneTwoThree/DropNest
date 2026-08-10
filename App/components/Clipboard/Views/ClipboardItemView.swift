@@ -70,7 +70,7 @@ struct ClipboardItemView: View {
                                 .foregroundStyle(.secondary)
                         }
                         if item.isSourceMissing {
-                            Text("源已失效")
+                            Text("Source Expired")
                                 .font(.caption2)
                                 .foregroundStyle(.orange)
                         }
@@ -82,7 +82,7 @@ struct ClipboardItemView: View {
                 if isCurrentClipboard {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                        .help("当前剪贴板内容")
+                        .help("Current Clipboard Content")
                 }
             }
             .padding(.horizontal, 8)
@@ -142,7 +142,7 @@ struct ClipboardItemView: View {
                     .frame(width: 28, height: 28)
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: 5))
-                    .help("点击行复制 · 右键快速查看大图")
+                    .help("Click row to copy · Right click to preview image")
             } else {
                 symbolThumb("photo")
             }

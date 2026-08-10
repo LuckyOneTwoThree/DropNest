@@ -55,7 +55,7 @@ class BatteryStatusViewModel: ObservableObject {
             print("🔌 Power source: \(isPluggedIn ? "Connected" : "Disconnected")")
             withAnimation {
                 self.isPluggedIn = isPluggedIn
-                self.statusText = isPluggedIn ? "已连接电源" : "已断开电源"
+                self.statusText = isPluggedIn ? String(localized: "Power Connected", locale: LanguageManager.shared.currentLocale) : String(localized: "Power Disconnected", locale: LanguageManager.shared.currentLocale)
                 self.notifyImportanChangeStatus()
             }
 
@@ -71,7 +71,8 @@ class BatteryStatusViewModel: ObservableObject {
             self.notifyImportanChangeStatus()
             withAnimation {
                 self.isInLowPowerMode = isEnabled
-                self.statusText = "低电量模式: \(self.isInLowPowerMode ? "开" : "关")"
+                let state = self.isInLowPowerMode ? String(localized: "On", locale: LanguageManager.shared.currentLocale) : String(localized: "Off", locale: LanguageManager.shared.currentLocale)
+                self.statusText = String(localized: "Low Power Mode: \(state)", locale: LanguageManager.shared.currentLocale)
             }
 
         case .isChargingChanged(let isCharging):
@@ -81,8 +82,8 @@ class BatteryStatusViewModel: ObservableObject {
                 self.isCharging = isCharging
                 self.statusText =
                     isCharging
-                    ? "正在充电"
-                    : (self.levelBattery < self.maxCapacity ? "未在充电" : "已充满")
+                    ? String(localized: "Charging", locale: LanguageManager.shared.currentLocale)
+                    : (self.levelBattery < self.maxCapacity ? String(localized: "Not Charging", locale: LanguageManager.shared.currentLocale) : String(localized: "Fully Charged", locale: LanguageManager.shared.currentLocale))
             }
 
         case .timeToFullChargeChanged(let time):
@@ -111,7 +112,7 @@ class BatteryStatusViewModel: ObservableObject {
             self.isInLowPowerMode = batteryInfo.isInLowPowerMode
             self.timeToFullCharge = batteryInfo.timeToFullCharge
             self.maxCapacity = batteryInfo.maxCapacity
-            self.statusText = batteryInfo.isPluggedIn ? "已连接电源" : "已断开电源"
+            self.statusText = batteryInfo.isPluggedIn ? String(localized: "Power Connected", locale: LanguageManager.shared.currentLocale) : String(localized: "Power Disconnected", locale: LanguageManager.shared.currentLocale)
         }
     }
 
@@ -122,7 +123,7 @@ class BatteryStatusViewModel: ObservableObject {
         if isLow && !hasNotifiedLowBattery {
             hasNotifiedLowBattery = true
             withAnimation {
-                self.statusText = "电量不足 \(Int(level))%"
+                self.statusText = String(localized: "Low Battery \(Int(level))%", locale: LanguageManager.shared.currentLocale)
             }
             notifyImportanChangeStatus()
         } else if !isLow {

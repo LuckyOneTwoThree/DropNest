@@ -272,12 +272,32 @@ final class ShelfItemViewModel: ObservableObject {
         if !selection.isSelected(item.id) { selection.selectSingle(item) }
     }
 
+enum ShelfMenuItemAction {
+    case open
+    case showInFinder
+    case quickLook
+    case share
+    case removeBackground
+    case convertImage
+    case createPDF
+    case compress
+    case rename
+    case copy
+    case copyPath
+    case createGroup
+    case openGroupOnDesktop
+    case toggleGroupView
+    case dissolveGroup
+    case remove
+}
+
     func presentContextMenu(event: NSEvent, in view: NSView) {
         ensureContextMenuSelection()
         let menu = NSMenu()
 
-        func addMenuItem(title: String) {
+        func addMenuItem(title: String, action: ShelfMenuItemAction) {
             let mi = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            mi.representedObject = action
             menu.addItem(mi)
         }
 
@@ -295,11 +315,11 @@ final class ShelfItemViewModel: ObservableObject {
         }
 
         if !selectedOpenableURLs.isEmpty {
-            addMenuItem(title: "打开")
+            addMenuItem(title: String(localized: "Open", locale: LanguageManager.shared.currentLocale), action: .open)
         }
 
         if !selectedOpenableURLs.isEmpty {
-            let openWith = NSMenuItem(title: "用其他方式打开", action: nil, keyEquivalent: "")
+            let openWith = NSMenuItem(title: String(localized: "Open With", locale: LanguageManager.shared.currentLocale), action: nil, keyEquivalent: "")
             let submenu = NSMenu()
 
             // Choose a representative URL to compute apps (prefer current item if not a folder)
@@ -324,7 +344,7 @@ final class ShelfItemViewModel: ObservableObject {
             let defaultApp = defaultAppURL()
 
             if openWithApps.isEmpty {
-                let noApps = NSMenuItem(title: "No Compatible Apps Found", action: nil, keyEquivalent: "")
+                let noApps = NSMenuItem(title: String(localized: "No Compatible Apps Found", locale: LanguageManager.shared.currentLocale), action: nil, keyEquivalent: "")
                 noApps.isEnabled = false
                 submenu.addItem(noApps)
             } else {
@@ -338,7 +358,7 @@ final class ShelfItemViewModel: ObservableObject {
                         .font: NSFont.menuFont(ofSize: 0),
                         .foregroundColor: NSColor.labelColor
                     ])
-                    let defaultPart = NSAttributedString(string: " (default)", attributes: [
+                    let defaultPart = NSAttributedString(string: String(localized: " (default)", locale: LanguageManager.shared.currentLocale), attributes: [
                         .font: NSFont.menuFont(ofSize: 0),
                         .foregroundColor: NSColor.secondaryLabelColor
                     ])
@@ -359,7 +379,7 @@ final class ShelfItemViewModel: ObservableObject {
             }
 
             submenu.addItem(NSMenuItem.separator())
-            let other = NSMenuItem(title: "Other…", action: nil, keyEquivalent: "")
+            let other = NSMenuItem(title: String(localized: "Other…", locale: LanguageManager.shared.currentLocale), action: nil, keyEquivalent: "")
             other.representedObject = "__OTHER__"
             submenu.addItem(other)
 
@@ -367,45 +387,50 @@ final class ShelfItemViewModel: ObservableObject {
             menu.addItem(openWith)
         }
 
-        if !selectedFileURLs.isEmpty { addMenuItem(title: "在访达中显示") }
+        if !selectedFileURLs.isEmpty { addMenuItem(title: String(localized: "Show in Finder", locale: LanguageManager.shared.currentLocale), action: .showInFinder) }
         // Allow Quick Look for files and link URLs
         if !selectedFileURLs.isEmpty || !selectedLinkURLs.isEmpty {
             // Add Quick Look menu item
-            let quickLookItem = NSMenuItem(title: "快速查看", action: nil, keyEquivalent: "")
+            let quickLookItem = NSMenuItem(title: String(localized: "Quick Look", locale: LanguageManager.shared.currentLocale), action: nil, keyEquivalent: "")
+            quickLookItem.representedObject = ShelfMenuItemAction.quickLook
             menu.addItem(quickLookItem)
             
             // Add Slideshow as alternate menu item (shown when Option key is held)
-            let slideshowItem = NSMenuItem(title: "快速查看", action: nil, keyEquivalent: "")
+            let slideshowItem = NSMenuItem(title: String(localized: "Quick Look", locale: LanguageManager.shared.currentLocale), action: nil, keyEquivalent: "")
+            slideshowItem.representedObject = ShelfMenuItemAction.quickLook
             slideshowItem.isAlternate = true
             slideshowItem.keyEquivalentModifierMask = [.option]
             menu.addItem(slideshowItem)
         }
 
         menu.addItem(NSMenuItem.separator())
-        addMenuItem(title: "分享…")
+        addMenuItem(title: String(localized: "Share…", locale: LanguageManager.shared.currentLocale), action: .share)
         
         // Add image processing options for image files grouped under "Image Actions"
         let imageURLs = selectedFileURLs.filter { ImageProcessingService.shared.isImageFile($0) }
         if !imageURLs.isEmpty {
             menu.addItem(NSMenuItem.separator())
 
-            let imageActions = NSMenuItem(title: "图片操作", action: nil, keyEquivalent: "")
+            let imageActions = NSMenuItem(title: String(localized: "Image Actions", locale: LanguageManager.shared.currentLocale), action: nil, keyEquivalent: "")
             let imageSubmenu = NSMenu()
 
             // Remove Background - only for single images
             if imageURLs.count == 1 {
-                let removeBg = NSMenuItem(title: "移除背景", action: nil, keyEquivalent: "")
+                let removeBg = NSMenuItem(title: String(localized: "Remove Background", locale: LanguageManager.shared.currentLocale), action: nil, keyEquivalent: "")
+                removeBg.representedObject = ShelfMenuItemAction.removeBackground
                 imageSubmenu.addItem(removeBg)
             }
 
             // Convert Image - only for single images
             if imageURLs.count == 1 {
-                let convertItem = NSMenuItem(title: "转换图片…", action: nil, keyEquivalent: "")
+                let convertItem = NSMenuItem(title: String(localized: "Convert Image…", locale: LanguageManager.shared.currentLocale), action: nil, keyEquivalent: "")
+                convertItem.representedObject = ShelfMenuItemAction.convertImage
                 imageSubmenu.addItem(convertItem)
             }
 
             // Create PDF - for one or more images
-            let createPDF = NSMenuItem(title: "创建 PDF", action: nil, keyEquivalent: "")
+            let createPDF = NSMenuItem(title: String(localized: "Create PDF", locale: LanguageManager.shared.currentLocale), action: nil, keyEquivalent: "")
+            createPDF.representedObject = ShelfMenuItemAction.createPDF
             imageSubmenu.addItem(createPDF)
 
             imageActions.submenu = imageSubmenu
@@ -415,17 +440,19 @@ final class ShelfItemViewModel: ObservableObject {
 
         // Add compression option for files/folders (single or multiple)
         if !selectedFileURLs.isEmpty {
-            let compressItem = NSMenuItem(title: "压缩", action: nil, keyEquivalent: "")
+            let compressItem = NSMenuItem(title: String(localized: "Compress", locale: LanguageManager.shared.currentLocale), action: nil, keyEquivalent: "")
+            compressItem.representedObject = ShelfMenuItemAction.compress
             menu.addItem(compressItem)
         }
 
-        if selectedItems.count == 1, case .file(_) = item.kind { addMenuItem(title: "重命名") }
+        if selectedItems.count == 1, case .file(_) = item.kind { addMenuItem(title: String(localized: "Rename", locale: LanguageManager.shared.currentLocale), action: .rename) }
 
         // Always show "Copy" for all item types
-        addMenuItem(title: "复制")
+        addMenuItem(title: String(localized: "Copy", locale: LanguageManager.shared.currentLocale), action: .copy)
         // If there are file URLs, add "Copy Path" as an alternate menu item (Option key)
         if !selectedFileURLs.isEmpty {
-            let copyPathItem = NSMenuItem(title: "复制路径", action: nil, keyEquivalent: "")
+            let copyPathItem = NSMenuItem(title: String(localized: "Copy Path", locale: LanguageManager.shared.currentLocale), action: nil, keyEquivalent: "")
+            copyPathItem.representedObject = ShelfMenuItemAction.copyPath
             copyPathItem.isAlternate = true
             copyPathItem.keyEquivalentModifierMask = [.option]
             menu.addItem(copyPathItem)
@@ -434,17 +461,20 @@ final class ShelfItemViewModel: ObservableObject {
         // 集合操作：多选可成组；组内条目可流转/查看/解散
         if selectedItems.count > 1 {
             menu.addItem(NSMenuItem.separator())
-            addMenuItem(title: "组成集合")
+            addMenuItem(title: String(localized: "Create Group", locale: LanguageManager.shared.currentLocale), action: .createGroup)
         } else if let groupID = item.groupID {
             menu.addItem(NSMenuItem.separator())
-            addMenuItem(title: "在桌面打开此集合")
+            addMenuItem(title: String(localized: "Open Group on Desktop", locale: LanguageManager.shared.currentLocale), action: .openGroupOnDesktop)
             let isExpanded = ShelfStateViewModel.shared.expandedGroupIDs.contains(groupID)
-            addMenuItem(title: isExpanded ? "收起查看" : "就地查看")
-            addMenuItem(title: "解散集合")
+            addMenuItem(
+                title: isExpanded ? String(localized: "Collapse View", locale: LanguageManager.shared.currentLocale) : String(localized: "View Inline", locale: LanguageManager.shared.currentLocale),
+                action: .toggleGroupView
+            )
+            addMenuItem(title: String(localized: "Dissolve Group", locale: LanguageManager.shared.currentLocale), action: .dissolveGroup)
         }
 
         menu.addItem(NSMenuItem.separator())
-        addMenuItem(title: "移除")
+        addMenuItem(title: String(localized: "Remove", locale: LanguageManager.shared.currentLocale), action: .remove)
 
         let actionTarget = MenuActionTarget(item: item, view: view, viewModel: self)
 
@@ -530,8 +560,10 @@ final class ShelfItemViewModel: ObservableObject {
                 return
             }
 
-            switch title {
-            case "快速查看":
+            guard let action = sender.representedObject as? ShelfMenuItemAction else { return }
+
+            switch action {
+            case .quickLook:
                 // Handle all selected items for Quick Look, not just the clicked item
                 let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
                 let urls: [URL] = selected.compactMap { item in
@@ -547,25 +579,22 @@ final class ShelfItemViewModel: ObservableObject {
                     viewModel.onQuickLookRequest?(urls)
                 }
 
-            case "打开":
+            case .open:
                 let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
                 for it in selected { ShelfActionService.open(it) }
 
-            case "分享…":
+            case .share:
                 viewModel.shareItem(from: view)
 
-            case "重命名":
+            case .rename:
                 let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
                 if selected.count == 1, let single = selected.first { showRenameDialog(for: single) }
 
-            case "在访达中显示":
+            case .showInFinder:
                 let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
                 Task {
                     let urls = await selected.asyncCompactMap { item -> URL? in
                         if case .file = item.kind {
-                            // Use immediate update for user-initiated menu action.
-                            // resolveAndUpdateBookmark 是 @MainActor 同步函数，本 Task 已继承
-                            // MainActor 隔离，同 actor 调用无需 await。
                             return ShelfStateViewModel.shared.resolveAndUpdateBookmark(for: item)
                         }
                         return nil
@@ -577,7 +606,7 @@ final class ShelfItemViewModel: ObservableObject {
                     }
                 }
 
-            case "复制路径":
+            case .copyPath:
                 let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
                 let paths = selected.compactMap { $0.fileURL?.path }
                 if !paths.isEmpty {
@@ -585,7 +614,7 @@ final class ShelfItemViewModel: ObservableObject {
                     NSPasteboard.general.setString(paths.joined(separator: "\n"), forType: .string)
                 }
 
-            case "复制":
+            case .copy:
                 let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
                 let pb = NSPasteboard.general
 
@@ -608,9 +637,7 @@ final class ShelfItemViewModel: ObservableObject {
                         // Write to pasteboard
                         pb.writeObjects(fileURLs as [NSURL])
 
-                        // 60s 后自动释放 security-scoped 句柄：pasteboard 已持有文件 URL 引用，
-                        // 接收方用自己的权限访问文件，本 App 的句柄仅写入 pasteboard 那一刻需要。
-                        // 不释放则会进程生命周期常驻，配额耗尽后所有 bookmark 解析静默失败。
+                        // 60s 后自动释放 security-scoped 句柄
                         ShelfItemViewModel.scheduleReleaseCopiedURLs()
                     } else {
                         let strings = selected.map { $0.displayName }
@@ -620,49 +647,47 @@ final class ShelfItemViewModel: ObservableObject {
                     }
                 }
 
-            case "移除":
+            case .remove:
                 let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
                 for it in selected { ShelfActionService.remove(it) }
 
-            case "组成集合":
+            case .createGroup:
                 let selectedIDs = ShelfSelectionModel.shared.selectedIDs
                 guard selectedIDs.count > 1 else { break }
                 ShelfStateViewModel.shared.createGroup(from: selectedIDs)
                 ShelfSelectionModel.shared.clear()
 
-            case "解散集合":
+            case .dissolveGroup:
                 if let groupID = item.groupID {
                     ShelfStateViewModel.shared.dissolveGroup(groupID)
                 }
 
-            case "在桌面打开此集合":
+            case .openGroupOnDesktop:
                 if let groupID = item.groupID {
                     FloatingNestManager.shared.toggle(groupID: groupID)
                 }
 
-            case "就地查看", "收起查看":
+            case .toggleGroupView:
                 if let groupID = item.groupID {
                     ShelfStateViewModel.shared.toggleGroupExpanded(groupID)
                 }
 
-            case "移除背景":
+            case .removeBackground:
                 handleRemoveBackground()
                 
-            case "转换图片…":
+            case .convertImage:
                 showConvertImageDialog()
                 
-            case "创建 PDF":
+            case .createPDF:
                 handleCreatePDF()
             
-            case "压缩":
+            case .compress:
                 let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
                 let fileURLs = selected.compactMap { $0.fileURL }
                 guard !fileURLs.isEmpty else { break }
 
                 Task {
                     // Create ZIP in a temporary location while holding access to selected resources.
-                    // createZip 不抛出错误，accessSecurityScopedResources 标记 rethrows 故整体不抛出，
-                    // 无需 try/do-catch。
                     if let zipTempURL = await fileURLs.accessSecurityScopedResources(accessor: { urls in
                         await TemporaryFileStorageService.shared.createZip(from: urls)
                     }) {
@@ -675,9 +700,6 @@ final class ShelfItemViewModel: ObservableObject {
                         }
                     }
                 }
-                
-            default:
-                break
             }
         }
 
@@ -700,9 +722,9 @@ final class ShelfItemViewModel: ObservableObject {
             guard let fileURL = targetURL else { return }
 
             let panel = NSOpenPanel()
-            panel.title = "Choose Application"
-            panel.message = "Choose an application to open the document \"\(item.displayName)\"."
-            panel.prompt = "打开"
+            panel.title = String(localized: "Choose Application", locale: LanguageManager.shared.currentLocale)
+            panel.message = String(localized: "Choose an application to open the document \"\(item.displayName)\".", locale: LanguageManager.shared.currentLocale)
+            panel.prompt = String(localized: "Open", locale: LanguageManager.shared.currentLocale)
             panel.allowsMultipleSelection = false
             panel.canChooseFiles = true
             panel.canChooseDirectories = false
@@ -720,7 +742,7 @@ final class ShelfItemViewModel: ObservableObject {
                 } else {
                     apps = NSWorkspace.shared.urlsForApplications(toOpen: fileURL)
                 }
-                return Set(apps.map { $0.standardizedFileURL })
+                return Set(apps)
             }()
 
             // Delegate to filter entries when in "Recommended Applications" mode
@@ -737,7 +759,6 @@ final class ShelfItemViewModel: ObservableObject {
                         case .all:
                             return true
                         case .recommended:
-                            // Standardize URLs for reliable comparison
                             let std = url.standardizedFileURL
                             return recommended.contains(std)
                         }
@@ -816,55 +837,38 @@ final class ShelfItemViewModel: ObservableObject {
             popup.action = #selector(PopupBinder.changed(_:))
 
             panel.begin { response in
-                if response == .OK, let appURL = panel.url {
-                    Task {
-                        do {
-                            let config = NSWorkspace.OpenConfiguration()
-                            if alwaysCheckbox.state == .on, let bundleID = Bundle(url: appURL)?.bundleIdentifier {
-                                if let contentType = (try? fileURL.resourceValues(forKeys: [.contentTypeKey]))?.contentType {
-                                    let status = LSSetDefaultRoleHandlerForContentType(contentType.identifier as CFString, LSRolesMask.all, bundleID as CFString)
-                                    if status != noErr { print("⚠️ Failed to set default handler for \(contentType.identifier): \(status)") }
-                                } else if let scheme = fileURL.scheme {
-                                    let status = LSSetDefaultHandlerForURLScheme(scheme as CFString, bundleID as CFString)
-                                    if status != noErr { print("⚠️ Failed to set default handler for scheme \(scheme): \(status)") }
-                                }
-                            }
+                guard response == .OK, let appURL = panel.url else { return }
 
-                            if needsSecurityScope {
-                                _ = try await fileURL.accessSecurityScopedResource { accessibleURL in
-                                    try await NSWorkspace.shared.open([accessibleURL], withApplicationAt: appURL, configuration: config)
-                                }
-                            } else {
-                                try await NSWorkspace.shared.open([fileURL], withApplicationAt: appURL, configuration: config)
+                Task {
+                    let config = NSWorkspace.OpenConfiguration()
+                    do {
+                        if needsSecurityScope {
+                            _ = try await fileURL.accessSecurityScopedResource { url in
+                                try await NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: config)
                             }
-                        } catch {
-                            print("❌ Failed to open with application: \(error.localizedDescription)")
+                        } else {
+                            try await NSWorkspace.shared.open([fileURL], withApplicationAt: appURL, configuration: config)
                         }
+                    } catch {
+                        print("❌ Failed to open with selected app: \(error.localizedDescription)")
                     }
                 }
-                // Keep binder/delegate alive until panel finishes
-                _ = binder
-                _ = chooserDelegate
             }
         }
         
         @MainActor
         private func showRenameDialog(for item: ShelfItem) {
-            guard case let .file(bookmarkData) = item.kind else { return }
-            // 后台解析 bookmark，避免主线程同步 IO
-            // detached task 内不引用 self（savePanel 完成回调用 ShelfStateViewModel.shared），
-            // 无需 [weak self] 捕获，避免 captured var 警告。
-            Task.detached(priority: .userInitiated) {
-                let bookmark = Bookmark(data: bookmarkData)
-                guard let fileURL = bookmark.resolveURL() else { return }
+            guard let fileURL = item.fileURL else { return }
+
+            Task {
                 // 回主线程创建 NSSavePanel（AppKit 要求主线程）
                 await MainActor.run {
                     // Start security-scoped access and keep it active until rename completes.
                     let didStart = fileURL.startAccessingSecurityScopedResource()
 
                     let savePanel = NSSavePanel()
-                    savePanel.title = "Rename File"
-                    savePanel.prompt = "重命名"
+                    savePanel.title = String(localized: "Rename File", locale: LanguageManager.shared.currentLocale)
+                    savePanel.prompt = String(localized: "Rename", locale: LanguageManager.shared.currentLocale)
                     savePanel.nameFieldStringValue = fileURL.lastPathComponent
                     savePanel.directoryURL = fileURL.deletingLastPathComponent()
                     savePanel.begin { response in
@@ -874,7 +878,6 @@ final class ShelfItemViewModel: ObservableObject {
                                 // defer 确保 security-scoped 句柄在任何路径下都释放
                                 defer { if didStart { fileURL.stopAccessingSecurityScopedResource() } }
                                 do {
-                                    NSLog("🔐 Rename: moving from \(fileURL.path) to \(newURL.path) (securityScope=\(didStart))")
                                     try FileManager.default.moveItem(at: fileURL, to: newURL)
                                     if let newBookmark = try? Bookmark(url: newURL) {
                                         await MainActor.run {
@@ -918,7 +921,7 @@ final class ShelfItemViewModel: ObservableObject {
                     }
                 } catch {
                     print("❌ Failed to remove background: \(error.localizedDescription)")
-                    showErrorAlert(title: "Background Removal Failed", message: error.localizedDescription)
+                    showErrorAlert(title: String(localized: "Background Removal Failed", locale: LanguageManager.shared.currentLocale), message: error.localizedDescription)
                 }
             }
         }
@@ -948,7 +951,7 @@ final class ShelfItemViewModel: ObservableObject {
                     }
                 } catch {
                     print("❌ Failed to create PDF: \(error.localizedDescription)")
-                    showErrorAlert(title: "PDF Creation Failed", message: error.localizedDescription)
+                    showErrorAlert(title: String(localized: "PDF Creation Failed", locale: LanguageManager.shared.currentLocale), message: error.localizedDescription)
                 }
             }
         }
@@ -962,17 +965,17 @@ final class ShelfItemViewModel: ObservableObject {
             
             // Create and show conversion options dialog with better layout
             let alert = NSAlert()
-            alert.messageText = "转换图片"
+            alert.messageText = String(localized: "Convert Image", locale: LanguageManager.shared.currentLocale)
             alert.alertStyle = .informational
-            alert.addButton(withTitle: "转换")
-            alert.addButton(withTitle: "取消")
+            alert.addButton(withTitle: String(localized: "Convert", locale: LanguageManager.shared.currentLocale))
+            alert.addButton(withTitle: String(localized: "Cancel", locale: LanguageManager.shared.currentLocale))
             
             // Create accessory view with better spacing and organization
             let accessoryView = NSView(frame: NSRect(x: 0, y: 0, width: 380, height: 180))
             accessoryView.wantsLayer = true
             
             // MARK: Format Row
-            let formatLabel = NSTextField(labelWithString: "Format:")
+            let formatLabel = NSTextField(labelWithString: String(localized: "Format:", locale: LanguageManager.shared.currentLocale))
             formatLabel.frame = NSRect(x: 0, y: 145, width: 100, height: 20)
             formatLabel.font = .systemFont(ofSize: 12, weight: .medium)
             accessoryView.addSubview(formatLabel)
@@ -984,26 +987,32 @@ final class ShelfItemViewModel: ObservableObject {
             accessoryView.addSubview(formatPopup)
             
             // MARK: Image Size Row
-            let imageSizeLabel = NSTextField(labelWithString: "Image Size:")
+            let imageSizeLabel = NSTextField(labelWithString: String(localized: "Image Size:", locale: LanguageManager.shared.currentLocale))
             imageSizeLabel.frame = NSRect(x: 0, y: 105, width: 100, height: 20)
             imageSizeLabel.font = .systemFont(ofSize: 12, weight: .medium)
             accessoryView.addSubview(imageSizeLabel)
             
             let imageSizePopup = NSPopUpButton(frame: NSRect(x: 120, y: 100, width: 160, height: 28))
-            imageSizePopup.addItems(withTitles: ["Actual Size", "Large", "Medium", "Small", "Custom..."])
+            imageSizePopup.addItems(withTitles: [
+                String(localized: "Actual Size", locale: LanguageManager.shared.currentLocale),
+                String(localized: "Large", locale: LanguageManager.shared.currentLocale),
+                String(localized: "Medium", locale: LanguageManager.shared.currentLocale),
+                String(localized: "Small", locale: LanguageManager.shared.currentLocale),
+                String(localized: "Custom...", locale: LanguageManager.shared.currentLocale)
+            ])
             imageSizePopup.selectItem(at: 0)
             imageSizePopup.font = .systemFont(ofSize: 12)
             accessoryView.addSubview(imageSizePopup)
             
             // Custom size field (initially hidden)
             let customSizeField = NSTextField(frame: NSRect(x: 285, y: 103, width: 85, height: 22))
-            customSizeField.placeholderString = "e.g., 1920"
+            customSizeField.placeholderString = String(localized: "e.g., 1920", locale: LanguageManager.shared.currentLocale)
             customSizeField.font = .systemFont(ofSize: 12)
             customSizeField.isHidden = true
             accessoryView.addSubview(customSizeField)
             
             // MARK: Preserve Metadata Checkbox
-            let metadataCheckbox = NSButton(checkboxWithTitle: "Preserve Metadata", target: nil, action: nil)
+            let metadataCheckbox = NSButton(checkboxWithTitle: String(localized: "Preserve Metadata", locale: LanguageManager.shared.currentLocale), target: nil, action: nil)
             metadataCheckbox.frame = NSRect(x: 120, y: 65, width: 200, height: 20)
             metadataCheckbox.font = .systemFont(ofSize: 12)
             metadataCheckbox.state = .on
@@ -1019,7 +1028,7 @@ final class ShelfItemViewModel: ObservableObject {
             let qualityRow = NSView(frame: NSRect(x: 0, y: 15, width: 380, height: 30))
             qualityRow.wantsLayer = true
             
-            let qualityLabel = NSTextField(labelWithString: "Compression:")
+            let qualityLabel = NSTextField(labelWithString: String(localized: "Compression:", locale: LanguageManager.shared.currentLocale))
             qualityLabel.frame = NSRect(x: 0, y: 7, width: 100, height: 20)
             qualityLabel.font = .systemFont(ofSize: 12, weight: .medium)
             qualityRow.addSubview(qualityLabel)
@@ -1156,7 +1165,7 @@ final class ShelfItemViewModel: ObservableObject {
                         }
                     } catch {
                         print("❌ Failed to convert image: \(error.localizedDescription)")
-                        showErrorAlert(title: "Image Conversion Failed", message: error.localizedDescription)
+                        showErrorAlert(title: String(localized: "Image Conversion Failed", locale: LanguageManager.shared.currentLocale), message: error.localizedDescription)
                     }
                 }
             }
@@ -1168,7 +1177,7 @@ final class ShelfItemViewModel: ObservableObject {
             alert.messageText = title
             alert.informativeText = message
             alert.alertStyle = .warning
-            alert.addButton(withTitle: "好")
+            alert.addButton(withTitle: String(localized: "OK", locale: LanguageManager.shared.currentLocale))
             alert.runModal()
         }
     }

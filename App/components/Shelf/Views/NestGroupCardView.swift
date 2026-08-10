@@ -79,7 +79,7 @@ struct NestGroupCardView: View {
                 previewImage: cachedPreviewImage ?? displayImages.first
             )
         }
-        .help("\(name) · \(members.count) 项，点击以悬浮巢展示")
+        .help(String(localized: "\(name) · \(members.count) items, click to present as floating nest", locale: LanguageManager.shared.currentLocale))
     }
 
     /// 精炼叠层图标：扇形展开，最前层最大，后方逐层缩窄偏移
@@ -132,7 +132,7 @@ struct NestGroupCardView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("收起查看")
+            .help("Collapse View")
 
             ForEach(members) { item in
                 ShelfItemView(item: item)
@@ -173,7 +173,7 @@ struct NestGroupCardView: View {
     private func renderDragPreview() -> NSImage {
         let content = DragPreviewView(
             thumbnail: displayImages.first ?? members.first?.icon,
-            displayName: "\(name)（\(members.count) 项）"
+            displayName: "\(name) (\(members.count) items)"
         )
         let renderer = ImageRenderer(content: content)
         renderer.scale = NSScreen.main?.backingScaleFactor ?? 2.0
@@ -284,9 +284,9 @@ private struct GroupCardDragHandler: NSViewRepresentable {
             let menu = NSMenu()
             let target = GroupMenuTarget(groupID: groupID)
             let isExpanded = ShelfStateViewModel.shared.expandedGroupIDs.contains(groupID)
-            let view = NSMenuItem(title: isExpanded ? "收起查看" : "就地查看", action: #selector(GroupMenuTarget.expand(_:)), keyEquivalent: "")
+            let view = NSMenuItem(title: isExpanded ? String(localized: "Collapse View", locale: LanguageManager.shared.currentLocale) : String(localized: "View Inline", locale: LanguageManager.shared.currentLocale), action: #selector(GroupMenuTarget.expand(_:)), keyEquivalent: "")
             view.target = target
-            let dissolve = NSMenuItem(title: "解散集合", action: #selector(GroupMenuTarget.dissolve(_:)), keyEquivalent: "")
+            let dissolve = NSMenuItem(title: String(localized: "Dissolve Group", locale: LanguageManager.shared.currentLocale), action: #selector(GroupMenuTarget.dissolve(_:)), keyEquivalent: "")
             dissolve.target = target
             menu.addItem(view)
             menu.addItem(dissolve)

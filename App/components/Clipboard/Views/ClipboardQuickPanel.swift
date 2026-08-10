@@ -53,7 +53,8 @@ final class ClipboardQuickPanel: NSPanel {
 
         contentView = NSHostingView(rootView: ClipboardQuickPanelRootView(state: state) { [weak self] item in
             self?.confirm(item)
-        })
+        }
+            .environment(\.locale, LanguageManager.shared.currentLocale))
 
         resignObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification, object: self, queue: .main
@@ -179,7 +180,7 @@ private struct ClipboardQuickPanelRootView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
-            Text(state.query.isEmpty ? "输入以过滤 · ↑↓ 选择 · ⏎ 复制" : state.query)
+            Text(state.query.isEmpty ? "Type to filter · ↑↓ Select · ⏎ Copy" : state.query)
                 .font(.system(.callout, design: .rounded))
                 .foregroundStyle(state.query.isEmpty ? .secondary : .primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -194,7 +195,7 @@ private struct ClipboardQuickPanelRootView: View {
     private var itemList: some View {
         let items = state.items(from: store)
         if items.isEmpty {
-            Text("没有匹配的剪贴板记录")
+            Text("No matching clipboard records")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

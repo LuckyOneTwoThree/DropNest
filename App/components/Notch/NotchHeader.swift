@@ -91,7 +91,7 @@ struct NotchHeader: View {
         HStack(spacing: 6) {
             ForEach(vm.enabledTabs, id: \.self) { tab in
                 tabButton(
-                    title: tab == .shelf ? "文件架" : "剪贴板",
+                    title: tab == .shelf ? String(localized: "Shelf", locale: LanguageManager.shared.currentLocale) : String(localized: "Clipboard", locale: LanguageManager.shared.currentLocale),
                     icon: tab == .shelf ? "books.vertical" : "clipboard",
                     tab: tab
                 )

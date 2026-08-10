@@ -62,18 +62,18 @@ struct ShelfView: View {
                 Image(systemName: confirmClear ? "exclamationmark.triangle.fill" : "trash")
                     .font(.system(size: 11))
                 if confirmClear {
-                    Text("确认清空？")
+                    Text("Confirm Clear?")
                         .font(.system(.caption2, design: .rounded))
                         .fontWeight(.semibold)
                 } else {
-                    Text("清空")
+                    Text("Clear")
                         .font(.system(.caption, design: .rounded))
                 }
             }
             .foregroundStyle(confirmClear ? .red : .red.opacity(0.85))
         }
         .buttonStyle(.plain)
-        .help("清空文件架全部内容")
+        .help("Clear all shelf contents")
         .animation(.smooth(duration: 0.15), value: confirmClear)
     }
 
@@ -115,7 +115,7 @@ struct ShelfView: View {
                     .foregroundStyle(FloatingNestManager.shared.hasVisiblePanels ? Color.accentColor : Color.gray)
             }
             .buttonStyle(.plain)
-            .help(FloatingNestManager.shared.hasVisiblePanels ? "收起全部桌面巢" : "展开全部桌面巢")
+            .help(FloatingNestManager.shared.hasVisiblePanels ? "Collapse All Floating Nests" : "Expand All Floating Nests")
         }
     }
 
@@ -144,7 +144,8 @@ struct ShelfView: View {
         return tvm.entries.map { entry in
             if case .group = entry {
                 ordinal += 1
-                return (entry, "集合 \(ordinal)")
+                let groupPrefix = String(localized: "Group", locale: LanguageManager.shared.currentLocale)
+                return (entry, "\(groupPrefix) \(ordinal)")
             }
             return (entry, "")
         }
@@ -160,7 +161,7 @@ struct ShelfView: View {
                         .foregroundStyle(.white, .gray)
                         .imageScale(.large)
 
-                    Text("把文件拖到这里")
+                    Text("Drag files here")
                         .foregroundStyle(.gray)
                         .font(.system(.title3, design: .rounded))
                         .fontWeight(.medium)
@@ -168,7 +169,7 @@ struct ShelfView: View {
             } else {
                 VStack(spacing: 14) {
                     HStack {
-                        Text("\(tvm.items.count) 项")
+                        Text("\(tvm.items.count) items")
                             .font(.system(.caption, design: .rounded))
                             .foregroundStyle(.gray)
                         Spacer()

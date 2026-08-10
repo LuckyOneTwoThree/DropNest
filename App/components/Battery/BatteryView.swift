@@ -93,7 +93,7 @@ struct BatteryMenuView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("电池状态")
+                Text("Battery Status")
                     .font(.headline)
                     .fontWeight(.semibold)
                 Spacer()
@@ -103,31 +103,31 @@ struct BatteryMenuView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("最大容量: \(Int(maxCapacity))%")
+                Text(String(format: String(localized: "Max Capacity: %d%%", locale: LanguageManager.shared.currentLocale), Int(maxCapacity)))
                     .font(.subheadline)
                     .fontWeight(.regular)
                 if isInLowPowerMode {
-                    Label("低电量模式", systemImage: "bolt.circle")
+                    Label("Low Power Mode", systemImage: "bolt.circle")
                         .font(.subheadline)
                         .fontWeight(.regular)
                 }
                 if isCharging {
-                    Label("正在充电", systemImage: "bolt.fill")
+                    Label("Charging", systemImage: "bolt.fill")
                         .font(.subheadline)
                         .fontWeight(.regular)
                 }
                 if isPluggedIn {
-                    Label("已连接电源", systemImage: "powerplug.fill")
+                    Label("Connected to Power", systemImage: "powerplug.fill")
                         .font(.subheadline)
                         .fontWeight(.regular)
                 }
                 if timeToFullCharge > 0 {
-                    Label("充满剩余: \(timeToFullCharge) 分钟", systemImage: "clock")
+                    Label(String(format: String(localized: "Time Until Full: %d minutes", locale: LanguageManager.shared.currentLocale), timeToFullCharge), systemImage: "clock")
                         .font(.subheadline)
                         .fontWeight(.regular)
                 }
                 if !isCharging && isPluggedIn && levelBattery >= 80 {
-                    Label("充电暂停: 桌面模式", systemImage: "desktopcomputer")
+                    Label("Charging Paused: Desktop Mode", systemImage: "desktopcomputer")
                         .font(.subheadline)
                         .fontWeight(.regular)
                 }
@@ -137,7 +137,7 @@ struct BatteryMenuView: View {
             Divider().background(Color.white)
 
             Button(action: openBatteryPreferences) {
-                Label("电池设置", systemImage: "gearshape")
+                Label("Battery Settings", systemImage: "gearshape")
                     .fontWeight(.regular)
             }
             .frame(maxWidth: .infinity)

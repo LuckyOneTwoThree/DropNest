@@ -180,6 +180,7 @@ final class FloatingNestPanel: NSPanel {
                     self.onHatch?(self)
                 }
             )
+            .environment(\.locale, LanguageManager.shared.currentLocale)
         )
     }
 
@@ -265,7 +266,7 @@ private struct FloatingNestRootView: View {
             Image(systemName: "plus.circle.fill")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Color.accentColor.opacity(0.8))
-            Text("松手新建暂存巢")
+            Text("Release to Create Nest")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
         }
@@ -288,11 +289,7 @@ private struct FloatingNestRootView: View {
         .opacity(appear ? 1.0 : 0)
         .onDrop(of: [.fileURL, .url, .utf8PlainText, .plainText, .data], isTargeted: $isDropTargeted) { providers in
             guard Defaults[.boringShelf] else { return false }
-            // 先暂存 providers，再延迟到下一个 runloop 触发孵化
-            // 避免在 onDrop 回调内同步重建 contentView 导致 drop 会话状态错乱
             FloatingNestManager.shared.pendingDropProviders = providers
-            // .onDrop 闭包已是 @MainActor；Task { @MainActor in } 保持"延迟到下一个 runloop"
-            // 语义，同时避免 DispatchQueue.main.async 把闭包变为 nonisolated 上下文触发 actor 隔离警告。
             Task { @MainActor in
                 onHatch?()
             }
@@ -314,7 +311,7 @@ private struct FloatingNestRootView: View {
                     Text("\(members.count)")
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .foregroundStyle(.primary)
-                    Text("项")
+                    Text("items")
                         .font(.system(size: 10, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
@@ -330,7 +327,7 @@ private struct FloatingNestRootView: View {
                         previewImage: cachedDragPreview
                     )
                 )
-                .help("拖动此处以整体拖出全部文件")
+                .help("Drag here to extract all files")
                 .contentShape(Rectangle())
 
                 Spacer()
@@ -340,7 +337,7 @@ private struct FloatingNestRootView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .help("收起（集合保留在刘海）")
+                .help("Collapse (group remains in Notch)")
                 Button(action: { onDelete?() }) {
                     Image(systemName: "trash")
                         .font(.system(size: 11, weight: .medium))
@@ -349,7 +346,7 @@ private struct FloatingNestRootView: View {
                         .background(Circle().fill(Color.red.opacity(0.15)))
                 }
                 .buttonStyle(.plain)
-                .help("删除集合")
+                .help("Delete Group")
             }
             .padding(.horizontal, 12)
             .padding(.top, 12)
@@ -361,7 +358,7 @@ private struct FloatingNestRootView: View {
                 HStack(spacing: 6) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("载入中…")
+                    Text("Loading…")
                         .font(.system(size: 11, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
@@ -586,7 +583,7 @@ private class NestDragSourceView: NSView, NSDraggingSource {
             return
         }
         let menu = NSMenu()
-        let moveAll = NSMenuItem(title: "全部移到文件夹…", action: #selector(moveAllAction(_:)), keyEquivalent: "")
+        let moveAll = NSMenuItem(title: String(localized: "Move All to Folder…", locale: LanguageManager.shared.currentLocale), action: #selector(moveAllAction(_:)), keyEquivalent: "")
         moveAll.target = self
         menu.addItem(moveAll)
         NSMenu.popUpContextMenu(menu, with: event, for: self)
@@ -740,7 +737,7 @@ enum NestDragExportService {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = Defaults[.copyOnDrag] ? "复制到此" : "移动到此"
+        panel.prompt = Defaults[.copyOnDrag] ? String(localized: "Copy Here", locale: LanguageManager.shared.currentLocale) : String(localized: "Move Here", locale: LanguageManager.shared.currentLocale)
         guard panel.runModal() == .OK, let dest = panel.url else { return }
 
         let copy = Defaults[.copyOnDrag]
